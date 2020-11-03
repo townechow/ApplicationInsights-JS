@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30523.141
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationInsightsSnippet", "ApplicationInsightsSnippet.csproj", "{77D33C63-34B3-4F75-9C33-3D69CD76FE49}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{77D33C63-34B3-4F75-9C33-3D69CD76FE49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77D33C63-34B3-4F75-9C33-3D69CD76FE49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77D33C63-34B3-4F75-9C33-3D69CD76FE49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77D33C63-34B3-4F75-9C33-3D69CD76FE49}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6C2A3486-BE0B-417D-9C2E-DF768E4299BA}
+	EndGlobalSection
+EndGlobal

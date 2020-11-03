@@ -17,7 +17,7 @@
     <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
   <files>
-    <file src="..\AISKU\snippet\snippet.min.js" target="content\scripts\ai-snippet.min.js"/>
+    <file src="..\..\AISKU\snippet\snippet.min.js" target="content\scripts\ai-snippet.min.js"/>
     <file src="icon.png" target="images" />
   </files>
 </package>
