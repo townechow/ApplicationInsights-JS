@@ -99,7 +99,7 @@ appInsights.loadAppInsights();
 | parentDataTag | string | null | Stop traversing up the DOM to capture content name and value of elements when encountered with this tag. |
 | donotTrackDataTag | string | ai-dnt | Custom attribute Tag to not track telemetry data. |
 
-## Usage with Example(JS)
+## Usage with Example Config (JS)
 
 ```html
 <script type="text/javascript" src="https://js.monitor.azure.com/scripts/b/ai.2.min.js"></script>
@@ -134,7 +134,7 @@ appInsights.loadAppInsights();
 
 ## Sample App
 
-TODO
+[Simple Web App with Click Analytics Plugin Enabled](https://github.com/kryalama/application-insights-clickanalytics-demo)
 
 ## Contributing
 
