@@ -46,6 +46,31 @@ export class Exception extends ExceptionData implements ISerializable {
     public static envelopeType = "Microsoft.ApplicationInsights.{0}.Exception";
     public static dataType = "ExceptionData";
 
+    public static CreateFromInterface(logger: IDiagnosticLogger, exception: IExceptionInternal, properties?: any, measurements?: { [key: string]: number }): Exception {
+        const exceptions: _ExceptionDetails[] = exception.exceptions
+            && CoreUtils.arrMap(exception.exceptions, (ex: IExceptionDetailsInternal) => _ExceptionDetails.CreateFromInterface(logger, ex));
+        const exceptionData = new Exception(logger, {...exception, exceptions}, properties, measurements);
+        return exceptionData;
+    }
+
+    /**
+     * Creates a simple exception with 1 stack frame. Useful for manual constracting of exception.
+     */
+    public static CreateSimpleException(message: string, typeName: string, assembly: string, fileName: string,
+        details: string, line: number): Exception {
+
+        return {
+            exceptions: [
+                {
+                    hasFullStack: true,
+                    message,
+                    stack: details,
+                    typeName
+                } as ExceptionDetails
+            ]
+        } as Exception;
+    }
+
     public id?: string;
     public problemGroup?: string;
     public isManual?: boolean;
@@ -84,13 +109,6 @@ export class Exception extends ExceptionData implements ISerializable {
         }
     }
 
-    public static CreateFromInterface(logger: IDiagnosticLogger, exception: IExceptionInternal, properties?: any, measurements?: { [key: string]: number }): Exception {
-        const exceptions: _ExceptionDetails[] = exception.exceptions
-            && CoreUtils.arrMap(exception.exceptions, (ex: IExceptionDetailsInternal) => _ExceptionDetails.CreateFromInterface(logger, ex));
-        const exceptionData = new Exception(logger, {...exception, exceptions}, properties, measurements);
-        return exceptionData;
-    }
-
     public toInterface(): IExceptionInternal {
         const { exceptions, properties, measurements, severityLevel, ver, problemGroup, id, isManual } = this;
 
@@ -109,78 +127,9 @@ export class Exception extends ExceptionData implements ISerializable {
             isManual
         } as IExceptionInternal;
     }
-
-    /**
-     * Creates a simple exception with 1 stack frame. Useful for manual constracting of exception.
-     */
-    public static CreateSimpleException(message: string, typeName: string, assembly: string, fileName: string,
-        details: string, line: number): Exception {
-
-        return {
-            exceptions: [
-                {
-                    hasFullStack: true,
-                    message,
-                    stack: details,
-                    typeName
-                } as ExceptionDetails
-            ]
-        } as Exception;
-    }
 }
 
 export class _ExceptionDetails extends ExceptionDetails implements ISerializable {
-
-    public aiDataContract = {
-        id: FieldType.Default,
-        outerId: FieldType.Default,
-        typeName: FieldType.Required,
-        message: FieldType.Required,
-        hasFullStack: FieldType.Default,
-        stack: FieldType.Default,
-        parsedStack: FieldType.Array
-    };
-
-    constructor(logger: IDiagnosticLogger, exception: Error | IExceptionDetailsInternal) {
-        super();
-
-        if (!_isExceptionDetailsInternal(exception)) {
-            let error = exception as any;
-            if (!Util.isError(error)) {
-                error = error[strError] || error.evt || error;
-            }
-
-            this.typeName = DataSanitizer.sanitizeString(logger, _getErrorType(error)) || Util.NotSpecified;
-            this.message = DataSanitizer.sanitizeMessage(logger, exception.message) || Util.NotSpecified;
-            const stack = exception.stack;
-            this.parsedStack = _ExceptionDetails.parseStack(stack);
-            this.stack = DataSanitizer.sanitizeException(logger, stack);
-            this.hasFullStack = Util.isArray(this.parsedStack) && this.parsedStack.length > 0;
-        } else {
-            this.typeName = exception.typeName;
-            this.message = exception.message;
-            this.stack = exception.stack;
-            this.parsedStack = exception.parsedStack
-            this.hasFullStack = exception.hasFullStack
-        }
-    }
-
-    public toInterface(): IExceptionDetailsInternal {
-        const parsedStack = this.parsedStack instanceof Array
-            && CoreUtils.arrMap(this.parsedStack, (frame: _StackFrame) => frame.toInterface());
-
-        const exceptionDetailsInterface: IExceptionDetailsInternal = {
-            id: this.id,
-            outerId: this.outerId,
-            typeName: this.typeName,
-            message: this.message,
-            hasFullStack: this.hasFullStack,
-            stack: this.stack,
-            parsedStack: parsedStack || undefined
-        };
-
-        return exceptionDetailsInterface;
-    }
 
     public static CreateFromInterface(logger:IDiagnosticLogger, exception: IExceptionDetailsInternal): _ExceptionDetails {
         const parsedStack = (exception.parsedStack instanceof Array
@@ -245,6 +194,57 @@ export class _ExceptionDetails extends ExceptionDetails implements ISerializable
 
         return parsedStack;
     }
+
+    public aiDataContract = {
+        id: FieldType.Default,
+        outerId: FieldType.Default,
+        typeName: FieldType.Required,
+        message: FieldType.Required,
+        hasFullStack: FieldType.Default,
+        stack: FieldType.Default,
+        parsedStack: FieldType.Array
+    };
+
+    constructor(logger: IDiagnosticLogger, exception: Error | IExceptionDetailsInternal) {
+        super();
+
+        if (!_isExceptionDetailsInternal(exception)) {
+            let error = exception as any;
+            if (!Util.isError(error)) {
+                error = error[strError] || error.evt || error;
+            }
+
+            this.typeName = DataSanitizer.sanitizeString(logger, _getErrorType(error)) || Util.NotSpecified;
+            this.message = DataSanitizer.sanitizeMessage(logger, exception.message) || Util.NotSpecified;
+            const stack = exception.stack;
+            this.parsedStack = _ExceptionDetails.parseStack(stack);
+            this.stack = DataSanitizer.sanitizeException(logger, stack);
+            this.hasFullStack = Util.isArray(this.parsedStack) && this.parsedStack.length > 0;
+        } else {
+            this.typeName = exception.typeName;
+            this.message = exception.message;
+            this.stack = exception.stack;
+            this.parsedStack = exception.parsedStack
+            this.hasFullStack = exception.hasFullStack
+        }
+    }
+
+    public toInterface(): IExceptionDetailsInternal {
+        const parsedStack = this.parsedStack instanceof Array
+            && CoreUtils.arrMap(this.parsedStack, (frame: _StackFrame) => frame.toInterface());
+
+        const exceptionDetailsInterface: IExceptionDetailsInternal = {
+            id: this.id,
+            outerId: this.outerId,
+            typeName: this.typeName,
+            message: this.message,
+            hasFullStack: this.hasFullStack,
+            stack: this.stack,
+            parsedStack: parsedStack || undefined
+        };
+
+        return exceptionDetailsInterface;
+    }
 }
 
 export class _StackFrame extends StackFrame implements ISerializable {
@@ -253,6 +253,10 @@ export class _StackFrame extends StackFrame implements ISerializable {
     // methodName=$2, fileName=$4, lineNo=$5, column=$6
     public static regex = /^([\s]+at)?(.*?)(\@|\s\(|\s)([^\(\@\n]+):([0-9]+):([0-9]+)(\)?)$/;
     public static baseSize = 58; // '{"method":"","level":,"assembly":"","fileName":"","line":}'.length
+
+    public static CreateFromInterface(frame: IExceptionStackFrameInternal) {
+        return new _StackFrame(frame, null /* level is available in frame interface */);
+    }
     public sizeInBytes = 0;
 
     public aiDataContract = {
@@ -298,10 +302,6 @@ export class _StackFrame extends StackFrame implements ISerializable {
         this.sizeInBytes += _StackFrame.baseSize;
         this.sizeInBytes += this.level.toString().length;
         this.sizeInBytes += this.line.toString().length;
-    }
-
-    public static CreateFromInterface(frame: IExceptionStackFrameInternal) {
-        return new _StackFrame(frame, null /* level is available in frame interface */);
     }
 
     public toInterface() {

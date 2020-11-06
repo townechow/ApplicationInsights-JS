@@ -1,241 +1,269 @@
 module.exports = function (grunt) {
-    grunt.initConfig({
-        tslint: {
-            options: {
-                rulesDirectory: 'node_modules/tslint-microsoft-contrib',
+
+    function addTsConfigBuilds(modules) {
+        var buildCmds = {
+            ts: {
+                options: {
+                    comments: true
+                }            
             },
-            files: {
-                src: [
-                    './shared/AppInsightsCommon/**/*.ts',
-                    './extensions/**/*.ts',
-                    './AISKU/**/*.ts',
-                    '!./**/node_modules/**',
-                    '!./**/Tests/**',
-                    '!./**/dist-esm/**',
-                    '!./**/Generated/**',
-                    './legacy/JavaScript/**/*.ts',
-                    '!./legacy/JavaScript/JavaScriptSDK.Tests/**'
-                ],
+            tslint: {
             }
-        },
-        ts: {
-            options: {
-                comments: true
-            },
-            default: {
-                tsconfig: './tsconfig.json',
-                src: [
-                    'legacy/JavaScript/JavaScriptSDK.Interfaces/*.ts',
-                    'legacy/JavaScript/JavaScriptSDK/*.ts',
-                ],
-                out: 'legacy/bundle/ai.js',
-            },
-            core: {
-                tsconfig: './shared/AppInsightsCore/tsconfig.json'
-            },
-            coretest: {
-                tsconfig: './shared/AppInsightsCore/Tests/tsconfig.json',
-                src: [
-                    './shared/AppInsightsCore/Tests/Selenium/ApplicationInsightsCore.Tests.ts',
-                    './shared/AppInsightsCore/Tests/Selenium/aitests.ts'
-                ],
-                out: 'shared/AppInsightsCore/Tests/Selenium/aicore.tests.js'
-            },
-            common: {
-                tsconfig: './shared/AppInsightsCommon/tsconfig.json'
-            },
-            commontest: {
-                tsconfig: './shared/AppInsightsCommon/Tests/tsconfig.json',
-                src: [
-                    './shared/AppInsightsCommon/Tests/Selenium/appinsights-common.tests.ts',
-                ],
-                out: 'shared/AppInsightsCommon/Tests/Selenium/aicommon.tests.js'
-            },
-            appinsights: {
-                tsconfig: './extensions/applicationinsights-analytics-js/tsconfig.json',
-            },
-            appinsightstests: {
-                tsconfig: './extensions/applicationinsights-analytics-js/Tests/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-analytics-js/Tests/Selenium/*.ts',
-                    './extensions/applicationinsights-analytics-js/Tests/*.ts'
-                ],
-                out: 'extensions/applicationinsights-analytics-js/Tests/Selenium/appinsights-analytics.tests.js'
-            },
-            aisku: {
-                tsconfig: './AISKU/tsconfig.json',
-                src: [
-                    'AISKU/src/*.ts'
-                ]
-            },
-            aiskulite: {
-                tsconfig: './AISKULight/tsconfig.json',
-                src: [
-                    'AISKULight/*.ts'
-                ]
-            },
-            aiskutests: {
-                tsconfig: './AISKU/Tests/tsconfig.json',
-                src: [
-                    'AISKU/Tests/Selenium/*.ts',
-                    'AISKU/Tests/*.ts'
-                ],
-                out: 'AISKU/Tests/Selenium/appinsights-sdk.tests.js'
-            },
-            properties: {
-                tsconfig: './extensions/applicationinsights-properties-js/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-properties-js/*.ts',
-                    './extensions/applicationinsights-properties-js/Context/*.ts',
-                    './extensions/applicationinsights-properties-js/Interfaces/Context/*.ts',
-                    './extensions/applicationinsights-properties-js/Interfaces/*.ts'
-                ]
-            },
-            clickanalytics: {
-                tsconfig: './extensions/applicationinsights-clickanalytics-js/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-clickanalytics-js/*.ts',
-                    './extensions/applicationinsights-clickanalytics-js/Interfaces/*.ts'
-                ]
-            },
-            clickanalyticstests: {
-                tsconfig: './extensions/applicationinsights-clickanalytics-js/Tests/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-clickanalytics-js/Tests/Selenium/*.ts',
-                    './extensions/applicationinsights-clickanalytics-js/Tests/*.ts'
-                ],
-                out: 'extensions/applicationinsights-clickanalytics-js/Tests/Selenium/appinsights-clickanalytics.tests.js'
-            },
-            propertiestests: {
-                tsconfig: './extensions/applicationinsights-properties-js/Tests/tsconfig.json',
-                src: './extensions/applicationinsights-properties-js/Tests/**/*.ts',
-                out: './extensions/applicationinsights-properties-js/Tests/Selenium/properties.tests.js'
-            },
-            reactnative: {
-                tsconfig: './extensions/applicationinsights-react-native/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-react-native/src/index.ts'
-                ]
-            },
-            reactnativetests: {
-                tsconfig: './extensions/applicationinsights-react-native/Tests/tsconfig.json',
-                src: './extensions/applicationinsights-react-native/Tests/**/*.ts',
-                out: './extensions/applicationinsights-react-native/Tests/Selenium/reactnativeplugin.tests.js'
-            },
-            deps: {
-                tsconfig: './extensions/applicationinsights-dependencies-js/tsconfig.json'
-            },
-            depstest: {
-                tsconfig: './extensions/applicationinsights-dependencies-js/Tests/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-dependencies-js/Tests/Selenium/*.ts',
-                    './extensions/applicationinsights-dependencies-js/Tests/TestsFramework/*.ts'
-                ],
-                out: './extensions/applicationinsights-dependencies-js/Tests/Selenium/dependencies.tests.js'
-            },
-            debugplugin: {
-                tsconfig: './extensions/applicationinsights-debugplugin-js/tsconfig.json',
-                src: [
-                    './extensions/applicationinsights-debugplugin-js/*.ts',
-                    './extensions/applicationinsights-debugplugin-js/components/*.ts',
-                ]
-            },
-            aichannel: {
-                tsconfig: './channels/applicationinsights-channel-js/tsconfig.json'
-            },
-            aichanneltest: {
-                tsconfig: './channels/applicationinsights-channel-js/Tests/tsconfig.json',
-                src: [
-                    './channels/applicationinsights-channel-js/Tests/Selenium/*.ts',
-                    './channels/applicationinsights-channel-js/Tests/*.ts',
-                ],
-                out: './channels/applicationinsights-channel-js/Tests/Selenium/aichannel.tests.js'
-            },
-            rollupes3: {
-                tsconfig: './tools/rollup-es3/tsconfig.json'
-            },
-            rollupes3test: {
-                tsconfig: './tools/rollup-es3/Tests/tsconfig.json',
-                src: [
-                    './tools/rollup-es3/Tests/Selenium/Es3RollupTests.ts'
-                ],
-                out: './tools/rollup-es3/Tests/Selenium/es3rolluptests.js'
-            },
-            shims: {
-                tsconfig: './tools/shims/tsconfig.json',
-                src: [
-                    './tools/shims/src/*.ts'
-                ]
-            },
-            shimstest: {
-                tsconfig: './tools/shims/Tests/tsconfig.json',
-                src: [
-                    './tools/shims/src/*.ts',
-                    './tools/shims/Tests/**/*.ts'
-                ],
-                out: './tools/shims/Tests/Selenium/shimstests.js'
-            },
-            module: {
-                // Use a different tsconfig for building module in order to not generate a declaration file for module, while keeping declaration for other modules
-                tsconfig: './tsconfigmodule.json',
-                src: [
-                    'legacy/JavaScript/JavaScriptSDK.Interfaces/*.ts',
-                    'legacy/JavaScript/JavaScriptSDK.Module/*.ts',
-                ],
-                out: 'legacy/bundle/ai.module.js'
-            },
-            types: {
-                tsconfig: './tsconfig.json',
-                src: [
-                    'legacy/JavaScript/JavaScriptSDK.Tests/DefinitionTypes/*.ts'
-                ],
-                out: 'legacy/bundle/test/ai.types.js'
-            },
-            test: {
-                tsconfig: './tsconfig.json',
-                src: [
-                    'legacy/JavaScript/JavaScriptSDK.Tests/Selenium/*.ts'
-                ],
-                out: 'legacy/JavaScript/JavaScriptSDK.Tests/Selenium/ai.tests.js'
-            },
-            testSchema: {
-                tsconfig: './tsconfig.json',
-                src: [
-                    'legacy/JavaScript/JavaScriptSDK.Tests/Contracts/Generated/*.ts'
-                ],
-                out: 'legacy/bundle/test/ai.schema.tests.js'
-            },
-            testE2E: {
-                tsconfig: './tsconfig.json',
-                files: [
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/DisableTelemetry.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/DisableTelemetry.tests.js'
+        };
+    
+        for (var key in modules) {
+            if (modules.hasOwnProperty(key)) {
+                var modulePath = modules[key];
+
+                if (grunt.file.exists(modulePath + '/tsconfig.json')) {
+                    buildCmds.ts[key] = {
+                        'tsconfig': modulePath + "/tsconfig.json",
+                    };
+                } else {
+                    console.error("Missing tsconfig.json for " + key + " - " + modulePath + "/tsconfig.json");
+                }
+
+                buildCmds.tslint[key + '-lint-fix'] = {
+                    options: {
+                        configuration: './tslint.json',
+                        project: modulePath + '/tsconfig.json',
+                        rulesDirectory: 'node_modules/tslint-microsoft-contrib',
+                        force: true,
+                        fix: true
                     },
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/PublicApi.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/PublicApiTests.tests.js'
+                    files: {
+                        src: [
+                            modulePath +'/src/**/*.ts'
+                        ]
+                    }                    
+                };
+
+                buildCmds.tslint[key + '-lint'] = {
+                    options: {
+                        configuration: './tslint.json',
+                        project: modulePath + '/tsconfig.json',
+                        rulesDirectory: 'node_modules/tslint-microsoft-contrib',
+                        force: false,
+                        fix: false
                     },
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/SanitizerE2E.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/SanitizerE2E.tests.js'
-                    },
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/SenderE2E.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/SenderE2E.tests.js'
-                    },
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/Snippet.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/Snippet.tests.js'
-                    },
-                    {
-                        src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/ValidateApi.tests.ts',
-                        dest: 'legacy/bundle/test/e2e/ValidateApi.tests.js'
-                    }
-                ],
-                outDir: 'legacy/bundle/test/e2e'
+                    files: {
+                        src: [
+                            modulePath +'/src/**/*.ts'
+                        ]
+                    }                    
+                };
             }
+        }
+
+        return buildCmds;
+    }
+
+    function addTsConfig(buildCmds, modules) {
+        for (var key in modules) {
+            if (modules.hasOwnProperty(key) && !buildCmds.ts.hasOwnProperty(key)) {
+                buildCmds.ts[key] = modules[key];
+            }
+        }
+
+        return buildCmds;
+    }
+
+    function tsBuildActions(name, replaceName) {
+        var actions = [
+            "tslint:" + name + "-lint-fix",
+            "ts:" + name
+        ];
+
+        // actions.push("tslint:" + name + "-lint");
+
+        return actions;
+    }    
+
+    var buildCmds = addTsConfigBuilds({
+        // Channels
+        'aichannel':    './channels/applicationinsights-channel-js',
+
+        // Extensions
+        'appinsights':      './extensions/applicationinsights-analytics-js',
+        'properties':       './extensions/applicationinsights-properties-js',
+        'reactnative':      './extensions/applicationinsights-react-native',
+        'debugplugin':      './extensions/applicationinsights-debugplugin-js',
+        'deps':             './extensions/applicationinsights-dependencies-js',
+        'clickanalytics':   './extensions/applicationinsights-clickanalytics-js',
+
+        // Skus
+        'aisku':        './AISKU',
+        'aiskulite':    './AISKULight',
+
+        // Shared
+        'core':         './shared/AppInsightsCore',
+        'common':       './shared/AppInsightsCommon',
+
+        // Tools
+        'rollupes3':    './tools/rollup-es3',
+        'shims':        './tools/shims',
+        'tst-framework':'./common/Tests/Framework'
+    });
+
+    // Add Test Configs
+    buildCmds = addTsConfig(buildCmds, {
+        default: {
+            tsconfig: './tsconfig.json',
+            src: [
+                'legacy/JavaScript/JavaScriptSDK.Interfaces/*.ts',
+                'legacy/JavaScript/JavaScriptSDK/*.ts',
+            ],
+            out: 'legacy/bundle/ai.js',
         },
+        // coretest: {
+        //     tsconfig: './shared/AppInsightsCore/Tests/tsconfig.json',
+        //     src: [
+        //         './shared/AppInsightsCore/Tests/Selenium/ApplicationInsightsCore.Tests.ts',
+        //         './shared/AppInsightsCore/Tests/Selenium/aitests.ts'
+        //     ],
+        //     out: 'shared/AppInsightsCore/Tests/Selenium/aicore.tests.js'
+        // },
+        commontest: {
+            tsconfig: './shared/AppInsightsCommon/Tests/tsconfig.json',
+            src: [
+                './shared/AppInsightsCommon/Tests/Selenium/appinsights-common.tests.ts',
+            ],
+            out: 'shared/AppInsightsCommon/Tests/Selenium/aicommon.tests.js'
+        },
+        appinsightstests: {
+            tsconfig: './extensions/applicationinsights-analytics-js/Tests/tsconfig.json',
+            src: [
+                './extensions/applicationinsights-analytics-js/Tests/Selenium/*.ts',
+                './extensions/applicationinsights-analytics-js/Tests/*.ts'
+            ],
+            out: 'extensions/applicationinsights-analytics-js/Tests/Selenium/appinsights-analytics.tests.js'
+        },
+        aiskutests: {
+            tsconfig: './AISKU/Tests/tsconfig.json',
+            src: [
+                'AISKU/Tests/Selenium/*.ts',
+                'AISKU/Tests/*.ts'
+            ],
+            out: 'AISKU/Tests/Selenium/appinsights-sdk.tests.js'
+        },
+        propertiestests: {
+            tsconfig: './extensions/applicationinsights-properties-js/Tests/tsconfig.json',
+            src: './extensions/applicationinsights-properties-js/Tests/**/*.ts',
+            out: './extensions/applicationinsights-properties-js/Tests/Selenium/properties.tests.js'
+        },
+        clickanalyticstests: {
+            tsconfig: './extensions/applicationinsights-clickanalytics-js/Tests/tsconfig.json',
+            src: [
+                './extensions/applicationinsights-clickanalytics-js/Tests/Selenium/*.ts',
+                './extensions/applicationinsights-clickanalytics-js/Tests/*.ts'
+            ],
+            out: 'extensions/applicationinsights-clickanalytics-js/Tests/Selenium/appinsights-clickanalytics.tests.js'
+        },
+        reactnativetests: {
+            tsconfig: './extensions/applicationinsights-react-native/Tests/tsconfig.json',
+            src: './extensions/applicationinsights-react-native/Tests/**/*.ts',
+            out: './extensions/applicationinsights-react-native/Tests/Selenium/reactnativeplugin.tests.js'
+        },
+        depstest: {
+            tsconfig: './extensions/applicationinsights-dependencies-js/Tests/tsconfig.json',
+            src: [
+                './extensions/applicationinsights-dependencies-js/Tests/Selenium/*.ts',
+                './extensions/applicationinsights-dependencies-js/Tests/TestsFramework/*.ts'
+            ],
+            out: './extensions/applicationinsights-dependencies-js/Tests/Selenium/dependencies.tests.js'
+        },
+        aichanneltest: {
+            tsconfig: './channels/applicationinsights-channel-js/Tests/tsconfig.json',
+            src: [
+                './channels/applicationinsights-channel-js/Tests/Selenium/*.ts',
+                './channels/applicationinsights-channel-js/Tests/*.ts',
+            ],
+            out: './channels/applicationinsights-channel-js/Tests/Selenium/aichannel.tests.js'
+        },
+        rollupes3test: {
+            tsconfig: './tools/rollup-es3/Tests/tsconfig.json',
+            src: [
+                './tools/rollup-es3/Tests/Selenium/Es3RollupTests.ts'
+            ],
+            out: './tools/rollup-es3/Tests/Selenium/es3rolluptests.js'
+        },
+        shimstest: {
+            tsconfig: './tools/shims/Tests/tsconfig.json',
+            src: [
+                './tools/shims/src/*.ts',
+                './tools/shims/Tests/**/*.ts'
+            ],
+            out: './tools/shims/Tests/Selenium/shimstests.js'
+        }
+    });
+
+    // Add Legacy Configs
+    buildCmds = addTsConfig(buildCmds, {
+        module: {
+            // Use a different tsconfig for building module in order to not generate a declaration file for module, while keeping declaration for other modules
+            tsconfig: './tsconfigmodule.json',
+            src: [
+                'legacy/JavaScript/JavaScriptSDK.Interfaces/*.ts',
+                'legacy/JavaScript/JavaScriptSDK.Module/*.ts',
+            ],
+            out: 'legacy/bundle/ai.module.js'
+        },
+        types: {
+            tsconfig: './tsconfig.json',
+            src: [
+                'legacy/JavaScript/JavaScriptSDK.Tests/DefinitionTypes/*.ts'
+            ],
+            out: 'legacy/bundle/test/ai.types.js'
+        },
+        test: {
+            tsconfig: './tsconfig.json',
+            src: [
+                'legacy/JavaScript/JavaScriptSDK.Tests/Selenium/*.ts'
+            ],
+            out: 'legacy/JavaScript/JavaScriptSDK.Tests/Selenium/ai.tests.js'
+        },
+        testSchema: {
+            tsconfig: './tsconfig.json',
+            src: [
+                'legacy/JavaScript/JavaScriptSDK.Tests/Contracts/Generated/*.ts'
+            ],
+            out: 'legacy/bundle/test/ai.schema.tests.js'
+        },
+        testE2E: {
+            tsconfig: './tsconfig.json',
+            files: [
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/DisableTelemetry.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/DisableTelemetry.tests.js'
+                },
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/PublicApi.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/PublicApiTests.tests.js'
+                },
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/SanitizerE2E.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/SanitizerE2E.tests.js'
+                },
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/SenderE2E.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/SenderE2E.tests.js'
+                },
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/Snippet.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/Snippet.tests.js'
+                },
+                {
+                    src: 'legacy/JavaScript/JavaScriptSDK.Tests/E2ETests/ValidateApi.tests.ts',
+                    dest: 'legacy/bundle/test/e2e/ValidateApi.tests.js'
+                }
+            ],
+            outDir: 'legacy/bundle/test/e2e'
+        }
+    });
+
+    buildCmds = Object.assign({}, 
+        buildCmds,
+        {
         uglify: {
             ai: {
                 files: {
@@ -297,7 +325,7 @@ module.exports = function (grunt) {
             core: {
                 options: {
                     urls: [
-                        './shared/AppInsightsCore/Tests/Selenium/Tests.html'
+                        './shared/AppInsightsCore/Tests/Tests.html'
                     ],
                     timeout: 300 * 1000, // 5 min
                     console: false,
@@ -418,6 +446,9 @@ module.exports = function (grunt) {
         }
     });
 
+    
+    grunt.initConfig(buildCmds);
+
     grunt.event.on('qunit.testStart', function (name) {
         grunt.log.ok('Running test: ' + name);
     });
@@ -428,27 +459,27 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-qunit');
     grunt.loadNpmTasks('grunt-run');
     grunt.registerTask("default", ["ts:rollupes3", "ts:rollupes3test", "qunit:rollupes3", "ts:shims", "ts:shimstest", "qunit:shims", "ts:default", "uglify:ai", "uglify:snippet"]);
-    grunt.registerTask("core", ["ts:core"]);
-    grunt.registerTask("common", ["ts:common"]);
+    grunt.registerTask("core", tsBuildActions("core"));
+    grunt.registerTask("common", tsBuildActions("common"));
     grunt.registerTask("module", ["ts:module"]);
-    grunt.registerTask("ai", ["ts:appinsights"]);
+    grunt.registerTask("ai", tsBuildActions("appinsights"));
     grunt.registerTask("aitests", ["ts:appinsights", "ts:appinsightstests", "qunit:aitests"]);
-    grunt.registerTask("aisku", ["ts:aisku"]);
-    grunt.registerTask("aiskulite", ["ts:aiskulite"]);
+    grunt.registerTask("aisku", tsBuildActions("aisku"));
+    grunt.registerTask("aiskulite", tsBuildActions("aiskulite"));
     grunt.registerTask("snippetvnext", ["uglify:snippetvNext"]);
     grunt.registerTask("aiskutests", ["ts:aisku", "ts:aiskutests", "qunit:aisku"]);
     grunt.registerTask("test", ["ts:default", "ts:test", "ts:testSchema", "ts:testE2E", "qunit:all"]);
     grunt.registerTask("test1ds", ["coretest", "common", "propertiestests", "depstest", "aitests", "aiskutests", "reactnativetests", "reacttests"]);
-    grunt.registerTask("coretest", ["ts:core", "ts:coretest", "qunit:core"]);
+    grunt.registerTask("coretest", ["ts:core", "qunit:core"]);
     grunt.registerTask("commontest", ["ts:common", "ts:commontest", "qunit:common"]);
-    grunt.registerTask("properties", ["ts:properties"]);
+    grunt.registerTask("properties", tsBuildActions("properties"));
     grunt.registerTask("propertiestests", ["ts:properties", "ts:propertiestests", "qunit:properties"]);
-    grunt.registerTask("reactnative", ["ts:reactnative"]);
+    grunt.registerTask("reactnative", tsBuildActions("reactnative"));
     grunt.registerTask("reactnativetests", ["qunit:reactnative"]);
-    grunt.registerTask("deps", ["ts:deps"]);
+    grunt.registerTask("deps", tsBuildActions("deps"));
     grunt.registerTask("depstest", ["ts:deps", "ts:depstest", "qunit:deps"]);
-    grunt.registerTask("debugplugin", ["ts:debugplugin"]);
-    grunt.registerTask("aichannel", ["ts:aichannel"]);
+    grunt.registerTask("debugplugin",tsBuildActions("debugplugin"));
+    grunt.registerTask("aichannel", tsBuildActions("aichannel"));
     grunt.registerTask("aichanneltest", ["ts:aichannel", "ts:aichanneltest", "qunit:aichannel"]);
     grunt.registerTask("rollupes3", ["ts:rollupes3", "ts:rollupes3test", "qunit:rollupes3"]);
     grunt.registerTask("rollupes3test", ["ts:rollupes3", "ts:rollupes3test", "qunit:rollupes3"]);
@@ -456,4 +487,5 @@ module.exports = function (grunt) {
     grunt.registerTask("shimstest", ["ts:shims", "ts:shimstest", "qunit:shims"]);
     grunt.registerTask("clickanalytics", ["ts:clickanalytics"]);
     grunt.registerTask("clickanalyticstests", ["ts:clickanalytics", "ts:clickanalyticstests", "qunit:clickanalytics"]);
+    grunt.registerTask("tst-framework", ["ts:tst-framework"]);
 };

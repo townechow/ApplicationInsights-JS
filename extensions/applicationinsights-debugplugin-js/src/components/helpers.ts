@@ -424,7 +424,7 @@ export function formatLogElements(target: Object, tmLabel: string, key: string, 
 
     return {
         root: rootDiv,
-        isErr: isErr,
+        isErr,
         matched: matched || childOpened
     };
 }

@@ -12,16 +12,16 @@
     "alwaysStrict": true,
     "declaration": true,
     "declarationDir": "shared/AppInsightsCore/types",
-    "outDir": "./dist-esm",
-    "rootDir": "shared/AppInsightsCore/src",
+    "outDir": "dist-esm/",
+    "rootDir": "shared/AppInsightsCore",
     "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "./src/applicationinsights-core-js.ts",
-    "./src/JavaScriptSDK/**/*.ts",
-    "./src/JavaScriptSDK.Enums/**/*.ts",
-    "./src/JavaScriptSDK.Interfaces/**/*.ts"
+    "./src/**/*.ts",
+    "./Tests/**/*.ts"
   ],
-  "exclude": ["node_modules/"]
+  "exclude": [
+    "node_modules/"
+  ]
 }

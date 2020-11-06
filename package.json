@@ -10,9 +10,9 @@
     ],
     "scripts": {
         "postinstall": "node common/scripts/install-run-rush.js update",
-        "build": "node common/scripts/install-run-rush.js rebuild",
-        "test": "node common/scripts/install-run-rush.js test --verbose",
-        "lint": "node common/scripts/install-run-rush.js lint --verbose",
+        "build": "rush build",
+        "test": "rush test --verbose",
+        "lint": "rush lint --verbose",
         "rollupes3": "grunt rollupes3"
     },
     "repository": {
@@ -26,7 +26,7 @@
     },
     "homepage": "https://github.com/microsoft/ApplicationInsights-JS#readme",
     "devDependencies": {
-        "grunt": "^1.0.1",
+        "grunt": "^1.3.0",
         "grunt-cli": "^1.3.2",
         "grunt-contrib-qunit": "^3.1.0",
         "grunt-contrib-uglify": "^3.1.0",
@@ -34,7 +34,7 @@
         "grunt-ts": "^6.0.0-beta.22",
         "grunt-tslint": "^5.0.2",
         "tslint": "^5.19.0",
-        "tslint-microsoft-contrib": "^5.2.1",
+        "tslint-microsoft-contrib": "^6.2.0",
         "tslint-config-prettier": "^1.18.0",
         "typescript": "2.5.3",
         "whatwg-fetch": "^3.0.0"

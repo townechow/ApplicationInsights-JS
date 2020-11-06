@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-1.23.1.css">
     <script src="http://sinonjs.org/releases/sinon-2.3.8.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.js"></script>
-    <script src="../../../../common/Tests/Selenium/ModuleLoader.js"></script>
-    <script src="../../../../common/Tests/Selenium/SimpleSyncPromise.js"></script>
+    <script src="../../../common/Tests/Selenium/ModuleLoader.js"></script>
+    <script src="../../../common/Tests/Selenium/SimpleSyncPromise.js"></script>
 
     <script>
         var modules = new ModuleLoader({
-            baseUrl: '../../',
+            baseUrl: '../',
             paths: {
                 qunit: "../../common/Tests/External/qunit-1.23.1",
                 "whatwg-fetch": "../../common/Tests/External/whatwg-fetch.3.0.0"
@@ -31,7 +31,7 @@
         // Load DynamicProto
         modules.add("@microsoft/dynamicproto-js", "./node_modules/@microsoft/dynamicproto-js/lib/dist/umd/dynamicproto-js", true);
 
-        var testModule = modules.add("Tests/Selenium/aitests", "./Tests/Selenium/aicore.tests")
+        var testModule = modules.add("aitests", "Tests/aitests");
         testModule.run = function (tests) {
             console && console.log("Starting tests");
             QUnit.start();

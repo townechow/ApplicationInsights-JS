@@ -1,7 +1,9 @@
-/// <reference path="../External/qunit.d.ts" />
-/// <reference path="TestClass.ts" />
+/// <reference path="../../External/qunit.d.ts" />
 
-class PollingAssert {
+import { Assert } from "./Assert";
+import { TestClass } from "./TestClass";
+
+export class PollingAssert {
    /**
     * Starts polling assertion function for a period of time after which it's considered failed.
     * @param {() => boolean} assertionFunctionReturnsBoolean - funciton returning true if condition passes and false if condition fails. Assertion will be done on this function's result.
@@ -10,8 +12,8 @@ class PollingAssert {
     * @param {number} pollIntervalMs - polling interval in milliseconds
     * @returns {(nextTestStep) => void} callback which will be invoked by the TestClass
     */
-    public static createPollingAssert(assertionFunctionReturnsBoolean: () => boolean, assertDescription: string, timeoutSeconds: number = 30, pollIntervalMs: number = 500): (nextTestStep) => void {
-        const pollingAssert = (nextTestStep) => {
+    public static createPollingAssert(assertionFunctionReturnsBoolean: () => boolean, assertDescription: string, timeoutSeconds: number = 30, pollIntervalMs: number = 500): (nextTestStep: any) => void {
+        const pollingAssert = (nextTestStep: any) => {
             const timeout = new Date(new Date().getTime() + timeoutSeconds * 1000);
             const polling = () => {
                 if (assertionFunctionReturnsBoolean.apply(this)) {

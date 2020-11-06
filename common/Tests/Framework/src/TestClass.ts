@@ -1,9 +1,10 @@
-/// <reference path="../External/sinon.d.ts" />
-/// <reference path="../External/qunit.d.ts" />
-/// <reference path="Assert.ts" />
-/// <reference path="./TestCase.ts"/>
+/// <reference path="../../External/sinon.d.ts" />
+/// <reference path="../../External/qunit.d.ts" />
 
-class TestClass {
+import { Assert } from "./Assert";
+import { TestCase, TestCaseAsync } from "./TestCase";
+
+export class TestClass {
 
     public static isPollingStepFlag = "isPollingStep";
 
@@ -47,7 +48,7 @@ class TestClass {
         }
 
         // Create a wrapper around the test method so we can do test initilization and cleanup.
-        const testMethod = (assert) => {
+        const testMethod = (assert: any) => {
             const done = assert.async();
 
             // Save off the instance of the currently running suite.

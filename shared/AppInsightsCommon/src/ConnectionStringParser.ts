@@ -8,8 +8,6 @@ import { DEFAULT_BREEZE_ENDPOINT } from "./Constants";
 import { CoreUtils } from "@microsoft/applicationinsights-core-js";
 
 export class ConnectionStringParser {
-    private static _FIELDS_SEPARATOR = ";";
-    private static _FIELD_KEY_VALUE_SEPARATOR = "=";
 
     public static parse(connectionString?: string): ConnectionString {
         if (!connectionString) {
@@ -44,4 +42,6 @@ export class ConnectionStringParser {
 
         return result;
     }
+    private static _FIELDS_SEPARATOR = ";";
+    private static _FIELD_KEY_VALUE_SEPARATOR = "=";
 }

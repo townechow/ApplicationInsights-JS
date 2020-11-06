@@ -23,16 +23,40 @@ function _endsWith(value: string, search: string) {
 }
 
 export class Util {
-    private static document: any = getDocument() || {};
-    private static _canUseLocalStorage: boolean = undefined;
-    private static _canUseSessionStorage: boolean = undefined;
-    // listing only non-geo specific locations
-    private static _internalEndpoints: string[] = [
-        "https://dc.services.visualstudio.com/v2/track",
-        "https://breeze.aimon.applicationinsights.io/v2/track",
-        "https://dc-int.services.visualstudio.com/v2/track"
-    ];
     public static NotSpecified = "not_specified";
+
+    /**
+     * helper method to trim strings (IE8 does not implement String.prototype.trim)
+     */
+    public static trim = CoreUtils.strTrim;
+
+    /**
+     * generate random id string
+     */
+    public static newId = CoreUtils.newId;
+
+    /**
+     * generate W3C trace id
+     */
+    public static generateW3CId = CoreUtils.generateW3CId;
+
+    /**
+     * Check if an object is of type Array
+     */
+    public static isArray = CoreUtils.isArray;
+
+    /**
+     * Check if an object is of type Error
+     */
+    public static isError = CoreUtils.isError;
+
+    /**
+     * Check if an object is of type Date
+     */
+    public static isDate = CoreUtils.isDate;
+
+    // Keeping this name for backward compatibility (for now)
+    public static toISOStringForIE8 = CoreUtils.toISOString;
 
     public static createDomEvent(eventName: string): Event {
         let event: Event = null;
@@ -56,47 +80,6 @@ export class Util {
     public static disableStorage() {
         Util._canUseLocalStorage = false;
         Util._canUseSessionStorage = false;
-    }
-
-    /**
-     * Gets the localStorage object if available
-     * @return {Storage} - Returns the storage object if available else returns null
-     */
-    private static _getLocalStorageObject(): Storage {
-        if (Util.canUseLocalStorage()) {
-            return Util._getVerifiedStorageObject(StorageType.LocalStorage);
-        }
-
-        return null;
-    }
-
-    /**
-     * Tests storage object (localStorage or sessionStorage) to verify that it is usable
-     * More details here: https://mathiasbynens.be/notes/localstorage-pattern
-     * @param storageType Type of storage
-     * @return {Storage} Returns storage object verified that it is usable
-     */
-    private static _getVerifiedStorageObject(storageType: StorageType): Storage {
-        let storage: Storage = null;
-        let fail: boolean;
-        let uid: Date;
-        try {
-            if (CoreUtils.isNullOrUndefined(getGlobal())) {
-                return null;
-            }
-            uid = new Date;
-            storage = storageType === StorageType.LocalStorage ? getGlobalInst("localStorage") : getGlobalInst("sessionStorage");
-            storage.setItem(uid.toString(), uid.toString());
-            fail = storage.getItem(uid.toString()) !== uid.toString();
-            storage.removeItem(uid.toString());
-            if (fail) {
-                storage = null;
-            }
-        } catch (exception) {
-            storage = null;
-        }
-
-        return storage;
     }
 
     /**
@@ -195,18 +178,6 @@ export class Util {
             }
         }
         return false;
-    }
-
-    /**
-     * Gets the sessionStorage object if available
-     * @return {Storage} - Returns the storage object if available else returns null
-     */
-    private static _getSessionStorageObject(): Storage {
-        if (Util.canUseSessionStorage()) {
-            return Util._getVerifiedStorageObject(StorageType.SessionStorage);
-        }
-
-        return null;
     }
 
     /**
@@ -474,44 +445,11 @@ export class Util {
     }
 
     /**
-     * helper method to trim strings (IE8 does not implement String.prototype.trim)
-     */
-    public static trim = CoreUtils.strTrim;
-
-    /**
-     * generate random id string
-     */
-    public static newId = CoreUtils.newId;
-
-    /**
      * generate a random 32bit number (-0x80000000..0x7FFFFFFF).
      */
     public static random32() {
         return CoreUtils.random32(true);
     }
-
-    /**
-     * generate W3C trace id
-     */
-    public static generateW3CId = CoreUtils.generateW3CId;
-
-    /**
-     * Check if an object is of type Array
-     */
-    public static isArray = CoreUtils.isArray;
-
-    /**
-     * Check if an object is of type Error
-     */
-    public static isError = CoreUtils.isError;
-
-    /**
-     * Check if an object is of type Date
-     */
-    public static isDate = CoreUtils.isDate;
-
-    // Keeping this name for backward compatibility (for now)
-    public static toISOStringForIE8 = CoreUtils.toISOString;
 
     /**
      * Gets IE version returning the document emulation mode if we are running on IE, or null otherwise
@@ -618,15 +556,71 @@ export class Util {
 
         return extension;
     }
+    private static document: any = getDocument() || {};
+    private static _canUseLocalStorage: boolean = undefined;
+    private static _canUseSessionStorage: boolean = undefined;
+    // listing only non-geo specific locations
+    private static _internalEndpoints: string[] = [
+        "https://dc.services.visualstudio.com/v2/track",
+        "https://breeze.aimon.applicationinsights.io/v2/track",
+        "https://dc-int.services.visualstudio.com/v2/track"
+    ];
+
+    /**
+     * Gets the localStorage object if available
+     * @return {Storage} - Returns the storage object if available else returns null
+     */
+    private static _getLocalStorageObject(): Storage {
+        if (Util.canUseLocalStorage()) {
+            return Util._getVerifiedStorageObject(StorageType.LocalStorage);
+        }
+
+        return null;
+    }
+
+    /**
+     * Tests storage object (localStorage or sessionStorage) to verify that it is usable
+     * More details here: https://mathiasbynens.be/notes/localstorage-pattern
+     * @param storageType Type of storage
+     * @return {Storage} Returns storage object verified that it is usable
+     */
+    private static _getVerifiedStorageObject(storageType: StorageType): Storage {
+        let storage: Storage = null;
+        let fail: boolean;
+        let uid: Date;
+        try {
+            if (CoreUtils.isNullOrUndefined(getGlobal())) {
+                return null;
+            }
+            uid = new Date;
+            storage = storageType === StorageType.LocalStorage ? getGlobalInst("localStorage") : getGlobalInst("sessionStorage");
+            storage.setItem(uid.toString(), uid.toString());
+            fail = storage.getItem(uid.toString()) !== uid.toString();
+            storage.removeItem(uid.toString());
+            if (fail) {
+                storage = null;
+            }
+        } catch (exception) {
+            storage = null;
+        }
+
+        return storage;
+    }
+
+    /**
+     * Gets the sessionStorage object if available
+     * @return {Storage} - Returns the storage object if available else returns null
+     */
+    private static _getSessionStorageObject(): Storage {
+        if (Util.canUseSessionStorage()) {
+            return Util._getVerifiedStorageObject(StorageType.SessionStorage);
+        }
+
+        return null;
+    }
 }
 
 export class UrlHelper {
-    private static document: any = getDocument() || {};
-
-    private static _htmlAnchorIdx: number = 0;
-    // Use an array of temporary values as it's possible for multiple calls to parseUrl() will be called with different URLs
-    // Using a cache size of 5 for now as it current depth usage is at least 2, so adding a minor buffer to handle future updates
-    private static _htmlAnchorElement: HTMLAnchorElement[] = [null, null, null, null, null];
 
     public static parseUrl(url: string): HTMLAnchorElement {
         let anchorIdx = UrlHelper._htmlAnchorIdx;
@@ -720,6 +714,12 @@ export class UrlHelper {
 
         return result;
     }
+    private static document: any = getDocument() || {};
+
+    private static _htmlAnchorIdx: number = 0;
+    // Use an array of temporary values as it's possible for multiple calls to parseUrl() will be called with different URLs
+    // Using a cache size of 5 for now as it current depth usage is at least 2, so adding a minor buffer to handle future updates
+    private static _htmlAnchorElement: HTMLAnchorElement[] = [null, null, null, null, null];
 }
 
 export class CorrelationIdHelper {

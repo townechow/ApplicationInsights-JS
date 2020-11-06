@@ -1,0 +1,42 @@
+{
+    "name": "@microsoft/ai-test-framework",
+    "author": "Microsoft Corporation",
+    "version": "0.0.1",
+    "description": "Microsoft Application Insights Core Javascript SDK",
+    "keywords": [
+        "azure",
+        "cloud",
+        "script errors",
+        "microsoft",
+        "application insights",
+        "browser performance monitoring",
+        "web analytics"
+    ],
+    "module": "dist-esm/src/index.js",
+    "types": "dist-esm/src/index.d.ts",
+    "scripts": {
+        "clean": "grunt clean",
+        "build": "grunt tst-framework",
+        "test": ""
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/ApplicationInsights-JS/tree/master/common/Tests/Framework"
+    },
+    "license": "MIT",
+    "sideEffects": false,
+    "devDependencies": {
+        "grunt": "1.0.1",
+        "grunt-contrib-clean": "^1.1.0",
+        "grunt-contrib-qunit": "^3.1.0",
+        "grunt-ts": "^6.0.0-beta.15",
+        "grunt-tslint": "^5.0.2",
+        "rollup-plugin-node-resolve": "^3.4.0",
+        "rollup-plugin-replace": "^2.1.0",
+        "rollup-plugin-uglify": "^6.0.0",
+        "typescript": "2.5.3",
+        "rollup": "^0.66.0"
+    },
+    "dependencies": {
+    }
+}

@@ -6,6 +6,7 @@ import { es3Poly, es3Check, importCheck } from "@microsoft/applicationinsights-r
 
 const version = require("./package.json").version;
 const outputName = "applicationinsights-core-js";
+const testName = "aitests";
 const banner = [
   "/*!",
   ` * Application Insights JavaScript SDK - Core, ${version}`,
@@ -15,7 +16,7 @@ const banner = [
 
 const browserRollupConfigFactory = isProduction => {
   const browserRollupConfig = {
-    input: `dist-esm/${outputName}.js`,
+    input: `dist-esm/src/${outputName}.js`,
     output: {
       file: `browser/${outputName}.js`,
       banner: banner,
@@ -67,7 +68,7 @@ const browserRollupConfigFactory = isProduction => {
 
 const nodeUmdRollupConfigFactory = (isProduction) => {
   const nodeRollupConfig = {
-    input: `dist-esm/${outputName}.js`,
+    input: `dist-esm/src/${outputName}.js`,
     output: {
       file: `dist/${outputName}.js`,
       banner: banner,
@@ -113,9 +114,47 @@ const nodeUmdRollupConfigFactory = (isProduction) => {
   return nodeRollupConfig;
 }
 
+const testRollupConfigFactory = () => {
+  var inputPath = `dist-esm/Tests/${testName}.js`;
+  var outputPath = `Tests/${testName}.js`;
+  
+  const testRollupConfig = {
+    input: inputPath,
+    output: {
+      file: outputPath,
+      banner: banner,
+      format: "umd",
+      name: "Tests",
+      extend: true,
+      freeze: false,
+      sourcemap: true
+    },
+    plugins: [
+      dynamicRemove(),
+      replace({
+        delimiters: ["", ""],
+        values: {
+          "// Copyright (c) Microsoft Corporation. All rights reserved.": "",
+          "// Licensed under the MIT License.": ""
+        }
+      }),
+      importCheck({ exclude: [ "applicationinsights-core-js" ] }),
+      nodeResolve({
+        module: true,
+        browser: true,
+        preferBuiltins: false
+      })
+    ]
+  };
+
+
+  return testRollupConfig;
+};
+
 export default [
   nodeUmdRollupConfigFactory(true),
   nodeUmdRollupConfigFactory(false),
   browserRollupConfigFactory(true),
-  browserRollupConfigFactory(false)
+  browserRollupConfigFactory(false),
+  testRollupConfigFactory()
 ];

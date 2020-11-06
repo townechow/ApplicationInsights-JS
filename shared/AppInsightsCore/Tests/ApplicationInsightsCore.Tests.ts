@@ -1,13 +1,13 @@
-/// <reference path="../TestFramework/Common.ts" />
-/// <reference path="../../src/JavaScriptSDK/AppInsightsCore.ts" />
-/// <reference path="../../src/applicationinsights-core-js.ts" />
-
-import { IConfiguration, ITelemetryPlugin, ITelemetryItem, IPlugin, CoreUtils, IAppInsightsCore, getCrypto, getMsCrypto } from "../../src/applicationinsights-core-js"
-import { AppInsightsCore } from "../../src/JavaScriptSDK/AppInsightsCore";
-import { IChannelControls } from "../../src/JavaScriptSDK.Interfaces/IChannelControls";
-import { _InternalMessageId, LoggingSeverity } from "../../src/JavaScriptSDK.Enums/LoggingEnums";
-import { _InternalLogMessage, DiagnosticLogger } from "../../src/JavaScriptSDK/DiagnosticLogger";
-import { normalizeJsName } from "../../src/JavaScriptSDK/CoreUtils";
+import { Assert, TestClass } from "@microsoft/ai-test-framework";
+import { CoreUtils, normalizeJsName } from "../src/JavaScriptSDK/CoreUtils";
+import { IConfiguration } from "../src/JavaScriptSDK.Interfaces/IConfiguration";
+import { ITelemetryPlugin, IPlugin } from "../src/JavaScriptSDK.Interfaces/ITelemetryPlugin";
+import { ITelemetryItem } from "../src/JavaScriptSDK.Interfaces/ITelemetryItem";
+import { IAppInsightsCore } from "../src/JavaScriptSDK.Interfaces/IAppInsightsCore";
+import { AppInsightsCore } from "../src/JavaScriptSDK/AppInsightsCore";
+import { IChannelControls } from "../src/JavaScriptSDK.Interfaces/IChannelControls";
+import { _InternalMessageId, LoggingSeverity } from "../src/JavaScriptSDK.Enums/LoggingEnums";
+import { _InternalLogMessage, DiagnosticLogger } from "../src/JavaScriptSDK/DiagnosticLogger";
 
 const AIInternalMessagePrefix = "AITR_";
 const MaxInt32 = 0xFFFFFFFF;
@@ -391,7 +391,7 @@ export class ApplicationInsightsCoreTests extends TestClass {
                 }
 
                 let found = false;
-                (appInsightsCore as any)._extensions.forEach(ext => {
+                (appInsightsCore as any)._extensions.forEach((ext: any) => {
                     if (ext.identifier === samplingPlugin.identifier) {
                         found = true;
                     }
@@ -823,7 +823,7 @@ class TestSamplingPlugin implements ITelemetryPlugin {
     public priority: number = 5;
     public version = "1.0.31-Beta";
     public nexttPlugin: ITelemetryPlugin;
-    private samplingPercentage;
+    private samplingPercentage: any;
     private _validateItem = false;
 
     constructor(validateItem: boolean = false) {
@@ -870,7 +870,7 @@ class ChannelPlugin implements IChannelControls {
     public isPauseInvoked = false;
     public version: string = "1.0.33-Beta";
 
-    public processTelemetry;
+    public processTelemetry: any;
 
     public identifier = "Sender";
 

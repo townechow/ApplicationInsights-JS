@@ -178,9 +178,9 @@ dist/
 
 # Grunt
 .tscache
-**/Tests/Selenium/*tests.js
-**/Tests/Selenium/*tests.d.ts
-**/Tests/Selenium/*tests.js.map
+**/Tests/**/*tests.js
+**/Tests/**/*tests.d.ts
+**/Tests/**/*tests.js.map
 
 # Misc
 statistics.html
