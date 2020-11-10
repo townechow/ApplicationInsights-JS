@@ -107,4 +107,20 @@ export interface IConfiguration {
      * Defaults to 22, previous default value was 5, if you need to keep the previous maximum length you should set this value to 5.
      */
     idLength?: number;
+
+    /**
+     * @description If true, the SDK will not store or read any data from cookies. Default is false.
+     * @type {boolean}
+     * @memberof IConfig
+     * @defaultValue false
+     */
+    isCookieUseDisabled?: boolean;
+
+    /**
+     * @description Custom cookie domain. This is helpful if you want to share Application Insights cookies across subdomains.
+     * @type {string}
+     * @memberof IConfig
+     * @defaultValue ""
+     */
+    cookieDomain?: string;
 }

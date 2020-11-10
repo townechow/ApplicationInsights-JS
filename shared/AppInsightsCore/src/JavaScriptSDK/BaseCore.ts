@@ -19,6 +19,8 @@ import { _InternalMessageId, LoggingSeverity } from "../JavaScriptSDK.Enums/Logg
 import dynamicProto from '@microsoft/dynamicproto-js';
 import { IPerfManager } from "../JavaScriptSDK.Interfaces/IPerfManager";
 import { PerfManager } from "./PerfManager";
+import { ICookieManager } from "../JavaScriptSDK.Interfaces/ICookieManager";
+import { CookieManager } from "./CookieManager";
 
 const validationError = "Extensions must provide callback to initialize";
 
@@ -40,6 +42,7 @@ export class BaseCore implements IAppInsightsCore {
         let _channelController: ChannelController;
         let _notificationManager: INotificationManager;
         let _perfManager: IPerfManager;
+        let _cookieManager: ICookieManager;
     
         dynamicProto(BaseCore, this, (_self) => {
             _self._extensions = new Array<IPlugin>();
@@ -154,10 +157,12 @@ export class BaseCore implements IAppInsightsCore {
                     // setup default iKey if not passed in
                     telemetryItem.iKey = _self.config.instrumentationKey;
                 }
+
                 if (!telemetryItem.time) {
                     // add default timestamp if not passed in
                     telemetryItem.time = CoreUtils.toISOString(new Date());
                 }
+
                 if (_isNullOrUndefined(telemetryItem.ver)) {
                     // CommonSchema 4.0
                     telemetryItem.ver = "4.0";
@@ -203,6 +208,18 @@ export class BaseCore implements IAppInsightsCore {
                 return _notificationManager;
             };
         
+            _self.getCookieMgr = (): ICookieManager => {
+                if (!_cookieManager) {
+                    let config = _self.config || {};
+                    _cookieManager = new CookieManager(_self.logger, {
+                        enabled: !config.isCookieUseDisabled,
+                        domain: config.cookieDomain
+                    });
+                }
+
+                return _cookieManager;
+            };
+
             _self.getPerfMgr = (): IPerfManager => {
                 if (!_perfManager) {
                     if (_self.config &&  _self.config.enablePerfMgr) {
@@ -252,6 +269,11 @@ export class BaseCore implements IAppInsightsCore {
     }
 
     public getNotifyMgr(): INotificationManager {
+        // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
+        return null;
+    }
+
+    public getCookieMgr(): ICookieManager {
         // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
         return null;
     }

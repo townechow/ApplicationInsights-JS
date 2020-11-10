@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 "use strict";
 import { objCreateFn, strShimObject, strShimUndefined, strShimFunction, strShimPrototype } from "@microsoft/applicationinsights-shims";
-import { getWindow, getDocument, getCrypto, getPerformance, getMsCrypto, getNavigator }  from './EnvUtils';
+import { gblCookieMgr } from "./CookieManager";
+import { getWindow, getDocument, getCrypto, getPerformance, getMsCrypto, getNavigator, hasJSON, getJSON }  from './EnvUtils';
 
 // Added to help with minfication
 export const Undefined = strShimUndefined;
@@ -146,6 +147,22 @@ export function objForEachKey(target: any, callbackfn: (name: string, value: any
     }
 }
 
+/**
+ * The strEndsWith() method determines whether a string ends with the characters of a specified string, returning true or false as appropriate.
+ * @param value - The value to check whether it ends with the search value.
+ * @param search - The characters to be searched for at the end of the value.
+ * @returns true if the given search value is found at the end of the string, otherwise false.
+ */
+export function strEndsWith(value: string, search: string) {
+    if (value && search) {
+        let len = value.length;
+        let start = len - search.length;
+        return value.substring(start >= 0 ? start : 0, len) === search;
+    }
+
+    return false;
+}    
+
 export class CoreUtils {
     public static _canUseCookies: boolean;
 
@@ -225,7 +242,7 @@ export class CoreUtils {
      */
 
     public static disableCookies() {
-        CoreUtils._canUseCookies = false;
+        gblCookieMgr().disable();
     }
 
     public static newGuid(): string {
@@ -269,14 +286,16 @@ export class CoreUtils {
      * that do not define Array.prototype.xxxx (eg. ES3 only, IE8) just in case any page checks for presence/absence of the prototype
      * implementation. Note: For consistency this will not use the Array.prototype.xxxx implementation if it exists as this would
      * cause a testing requirement to test with and without the implementations
-     * @param callbackfn  A function that accepts up to three arguments. forEach calls the callbackfn function one time for each element in the array.
+     * @param callbackfn  A function that accepts up to three arguments. forEach calls the callbackfn function one time for each element in the array. It can return -1 to break out of the loop
      * @param thisArg  [Optional] An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
      */
-    public static arrForEach<T>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => void, thisArg?: any): void {
+    public static arrForEach<T>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => void|number, thisArg?: any): void {
         let len = arr.length;
         for (let idx = 0; idx < len; idx++) {
             if (idx in arr) {
-                callbackfn.call(thisArg || arr, arr[idx], idx, arr);
+                if (callbackfn.call(thisArg || arr, arr[idx], idx, arr) === -1) {
+                    break;
+                }
             }
         }
     }
@@ -649,6 +668,25 @@ export class CoreUtils {
         const clockSequenceHi = hexValues[8 + (CoreUtils.random32() & 0x03) | 0];
         return oct.substr(0, 8) + oct.substr(9, 4) + "4" + oct.substr(13, 3) + clockSequenceHi + oct.substr(16, 3) + oct.substr(19, 12);
     }
+
+    /**
+     * Static constructor, attempt to create accessors
+     */
+    // tslint:disable-next-line
+    private static _staticInit = (() => {
+        // Dynamically create get/set property accessors
+        CoreUtils.objDefineAccessors<boolean>(CoreUtils, "_canUseCookies", 
+            () => {
+                return gblCookieMgr().isEnabled();
+            }, 
+            (value) => {
+                if (value) {
+                    gblCookieMgr().enable();
+                } else {
+                    gblCookieMgr().disable();
+                }
+            });
+    })();
 }
 
 const GuidRegex = /[xy]/g;
@@ -689,4 +727,89 @@ export class EventHelper {
      * @return {boolean} - true if the handler was successfully added
      */
     public static DetachEvent: (obj: any, eventNameWithoutOn: string, handlerRef: any) => void = _detachEvent;
+}
+
+/**
+ * Returns the name of object if it's an Error. Otherwise, returns empty string.
+ */
+export function getExceptionName(object: any): string {
+    if (CoreUtils.isError(object)) {
+        return object.name;
+    }
+
+    return "";
+}
+
+/**
+ * Returns string representation of an object suitable for diagnostics logging.
+ */
+export function dumpObj(object: any): string {
+    const objectTypeDump: string = Object[strShimPrototype].toString.call(object);
+    let propertyValueDump: string = "";
+    if (objectTypeDump === "[object Error]") {
+        propertyValueDump = "{ stack: '" + object.stack + "', message: '" + object.message + "', name: '" + object.name + "'";
+    } else if (hasJSON()) {
+        propertyValueDump = getJSON().stringify(object);
+    }
+
+    return objectTypeDump + propertyValueDump;
+}
+
+export function uaDisallowsSameSiteNone(userAgent: string) {
+    if (!CoreUtils.isString(userAgent)) {
+        return false;
+    }
+
+    // Cover all iOS based browsers here. This includes:
+    // - Safari on iOS 12 for iPhone, iPod Touch, iPad
+    // - WkWebview on iOS 12 for iPhone, iPod Touch, iPad
+    // - Chrome on iOS 12 for iPhone, iPod Touch, iPad
+    // All of which are broken by SameSite=None, because they use the iOS networking stack
+    if (userAgent.indexOf("CPU iPhone OS 12") !== -1 || userAgent.indexOf("iPad; CPU OS 12") !== -1) {
+        return true;
+    }
+
+    // Cover Mac OS X based browsers that use the Mac OS networking stack. This includes:
+    // - Safari on Mac OS X
+    // This does not include:
+    // - Internal browser on Mac OS X
+    // - Chrome on Mac OS X
+    // - Chromium on Mac OS X
+    // Because they do not use the Mac OS networking stack.
+    if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && userAgent.indexOf("Version/") !== -1 && userAgent.indexOf("Safari") !== -1) {
+        return true;
+    }
+
+    // Cover Mac OS X internal browsers that use the Mac OS networking stack. This includes:
+    // - Internal browser on Mac OS X
+    // This does not include:
+    // - Safari on Mac OS X
+    // - Chrome on Mac OS X
+    // - Chromium on Mac OS X
+    // Because they do not use the Mac OS networking stack.
+    if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && strEndsWith(userAgent, "AppleWebKit/605.1.15 (KHTML, like Gecko)")) {
+        return true;
+    }
+
+    // Cover Chrome 50-69, because some versions are broken by SameSite=None, and none in this range require it.
+    // Note: this covers some pre-Chromium Edge versions, but pre-Chromim Edge does not require SameSite=None, so this is fine.
+    // Note: this regex applies to Windows, Mac OS X, and Linux, deliberately.
+    if (userAgent.indexOf("Chrome/5") !== -1 || userAgent.indexOf("Chrome/6") !== -1) {
+        return true;
+    }
+
+    // Unreal Engine runs Chromium 59, but does not advertise as Chrome until 4.23. Treat versions of Unreal
+    // that don't specify their Chrome version as lacking support for SameSite=None.
+    if (userAgent.indexOf("UnrealEngine") !== -1 && userAgent.indexOf("Chrome") === -1) {
+        return true;
+    }
+
+    // UCBrowser < 12.13.2 ignores Set-Cookie headers with SameSite=None
+    // NB: this rule isn't complete - you need regex to make a complete rule.
+    // See: https://www.chromium.org/updates/same-site/incompatible-clients
+    if (userAgent.indexOf("UCBrowser/12") !== -1 || userAgent.indexOf("UCBrowser/11") !== -1) {
+        return true;
+    }
+
+    return false;
 }

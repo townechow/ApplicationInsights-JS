@@ -16,7 +16,7 @@ export { SendRequestReason } from "./JavaScriptSDK.Enums/SendRequestReason";
 export { AppInsightsCore } from "./JavaScriptSDK/AppInsightsCore";
 export { BaseCore } from './JavaScriptSDK/BaseCore';
 export { BaseTelemetryPlugin } from './JavaScriptSDK/BaseTelemetryPlugin';
-export { CoreUtils, EventHelper, Undefined, normalizeJsName, objForEachKey } from "./JavaScriptSDK/CoreUtils";
+export { CoreUtils, EventHelper, Undefined, normalizeJsName, getExceptionName, dumpObj, uaDisallowsSameSiteNone, objForEachKey, strEndsWith } from "./JavaScriptSDK/CoreUtils";
 export { 
     getGlobal, getGlobalInst, hasWindow, getWindow, hasDocument, getDocument, getCrypto, getMsCrypto,
     hasNavigator, getNavigator, hasHistory, getHistory, getLocation, getPerformance, hasJSON, getJSON,
@@ -32,3 +32,5 @@ export { ProcessTelemetryContext } from './JavaScriptSDK/ProcessTelemetryContext
 export { initializePlugins, sortPlugins } from "./JavaScriptSDK/TelemetryHelpers";
 export { _InternalMessageId, LoggingSeverity } from './JavaScriptSDK.Enums/LoggingEnums';
 export { InstrumentProto, InstrumentProtos, InstrumentFunc, InstrumentFuncs } from "./JavaScriptSDK/InstrumentHooks";
+export { ICookieManager, ICookieManagerConfig } from './JavaScriptSDK.Interfaces/ICookieManager';
+export { CookieManager, gblCookieMgr } from './JavaScriptSDK/CookieManager';

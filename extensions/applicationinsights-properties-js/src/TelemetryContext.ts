@@ -3,7 +3,7 @@
  * @copyright Microsoft 2018
  */
 
-import { ITelemetryItem, IProcessTelemetryContext, IDiagnosticLogger, CoreUtils, hasWindow, _InternalLogMessage } from '@microsoft/applicationinsights-core-js';
+import { ITelemetryItem, IProcessTelemetryContext, IAppInsightsCore, IDiagnosticLogger, CoreUtils, hasWindow, _InternalLogMessage } from '@microsoft/applicationinsights-core-js';
 import { Session, _SessionManager } from './Context/Session';
 import { Extensions, ITelemetryContext, IOperatingSystem, ITelemetryTrace, IWeb, SampleRate, CtxTagKeys, PageView } from '@microsoft/applicationinsights-common';
 import { Application } from './Context/Application';
@@ -28,15 +28,16 @@ export class TelemetryContext implements ITelemetryContext {
     public web: IWeb;
     public appId: () => string;
 
-    constructor(logger: IDiagnosticLogger, defaultConfig: ITelemetryConfig) {
+    constructor(core: IAppInsightsCore, defaultConfig: ITelemetryConfig) {
         let _self = this;
+        let logger = core.logger
         _self.application = new Application();
         _self.internal = new Internal(defaultConfig);
         if (hasWindow()) {
-            _self.sessionManager = new _SessionManager(defaultConfig, logger);
+            _self.sessionManager = new _SessionManager(defaultConfig, core);
             _self.device = new Device();
             _self.location = new Location();
-            _self.user = new User(defaultConfig, logger);
+            _self.user = new User(defaultConfig, core);
             _self.telemetryTrace = new TelemetryTrace(undefined, undefined, undefined, logger);
             _self.session = new Session();
         }

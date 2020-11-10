@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 import { ISession, Util } from '@microsoft/applicationinsights-common';
-import { IDiagnosticLogger, _InternalMessageId, LoggingSeverity, CoreUtils, DiagnosticLogger } from '@microsoft/applicationinsights-core-js';
+import { IDiagnosticLogger, _InternalMessageId, LoggingSeverity, CoreUtils, DiagnosticLogger, IAppInsightsCore, ICookieManager, gblCookieMgr } from '@microsoft/applicationinsights-core-js';
+import dynamicProto from "@microsoft/dynamicproto-js";
+
+const cookieNameConst = 'ai_session';
 
 export interface ISessionConfig {
     sessionRenewalMs?: () => number;
@@ -37,62 +40,204 @@ export class _SessionManager {
     public static acquisitionSpan = 86400000; // 24 hours in ms
     public static renewalSpan = 1800000; // 30 minutes in ms
     public static cookieUpdateInterval = 60000 // 1 minute in ms
-    private static cookieNameConst = 'ai_session';
     public automaticSession: Session;
     public config: ISessionConfig;
 
-    private cookieUpdatedTimestamp: number;
-    private _logger: IDiagnosticLogger;
-    private _storageNamePrefix: () => string;
+    constructor(config: ISessionConfig, core?: IAppInsightsCore) {
+        let _storageNamePrefix: () => string;
+        let _cookieUpdatedTimestamp: number;
+        let _logger: IDiagnosticLogger = (core || {} as IAppInsightsCore).logger;
+        let _cookieManager: ICookieManager = (core ? core.getCookieMgr() : null) || gblCookieMgr();
 
-    constructor(config: ISessionConfig, logger?: IDiagnosticLogger) {
-        if(CoreUtils.isNullOrUndefined(logger)) {
-            this._logger = new DiagnosticLogger();
-        } else {
-            this._logger = logger;
+        if(CoreUtils.isNullOrUndefined(_logger)) {
+            _logger = new DiagnosticLogger();
         }
 
-        if (!config) {
-            config = ({} as any);
-        }
+        dynamicProto(_SessionManager, this, (_self) => {
+   
+            if (!config) {
+                config = ({} as any);
+            }
+    
+            if (!CoreUtils.isFunction(config.sessionExpirationMs)) {
+                config.sessionExpirationMs = () => _SessionManager.acquisitionSpan;
+            }
+    
+            if (!CoreUtils.isFunction(config.sessionRenewalMs)) {
+                config.sessionRenewalMs = () => _SessionManager.renewalSpan;
+            }
+    
+            _self.config = config;
+            _storageNamePrefix = () => _self.config.namePrefix && _self.config.namePrefix() ? cookieNameConst + _self.config.namePrefix() : cookieNameConst;
+    
+            _self.automaticSession = new Session();
 
-        if (!(typeof config.sessionExpirationMs === "function")) {
-            config.sessionExpirationMs = () => _SessionManager.acquisitionSpan;
-        }
+            _self.update = () => {
+                // Always using Date getTime() as there is a bug in older IE instances that causes the performance timings to have the hi-bit set eg 0x800000000 causing
+                // the number to be incorrect.
+                const now = new Date().getTime();
 
-        if (!(typeof config.sessionRenewalMs === "function")) {
-            config.sessionRenewalMs = () => _SessionManager.renewalSpan;
-        }
+                let expired = false;
+                const session = _self.automaticSession;
+                if (!session.id) {
+                    expired = !_initializeAutomaticSession(session, now);
+                }
 
-        this.config = config;
-        this._storageNamePrefix = () => this.config.namePrefix && this.config.namePrefix() ? _SessionManager.cookieNameConst + this.config.namePrefix() : _SessionManager.cookieNameConst;
+                // If we don't have an id then considered it to be expired
+                expired = expired || !session.id;
 
-        this.automaticSession = new Session();
+                const sessionExpirationMs = _self.config.sessionExpirationMs();
+
+                if (!expired && sessionExpirationMs > 0) {
+                    const sessionRenewalMs = _self.config.sessionRenewalMs();
+                    const timeSinceAcq = now - session.acquisitionDate;
+                    const timeSinceRenewal = now - session.renewalDate;
+                    expired = timeSinceAcq < 0 || timeSinceRenewal < 0;         // expired if the acquisition or last renewal are in the future
+                    expired = expired || timeSinceAcq > sessionExpirationMs;    // expired if the time since acquisition is more than session Expiration
+                    expired = expired || timeSinceRenewal > sessionRenewalMs;   // expired if the time since last renewal is more than renewal period
+                }
+        
+                // renew if acquisitionSpan or renewalSpan has elapsed
+                if (expired) {
+                    // update automaticSession so session state has correct id
+                    _renew(now);
+                } else {
+                    // do not update the cookie more often than cookieUpdateInterval
+                    if (!_cookieUpdatedTimestamp || now - _cookieUpdatedTimestamp > _SessionManager.cookieUpdateInterval) {
+                        _setCookie(session, now);
+                    }
+                }
+            };
+        
+            /**
+             *  Record the current state of the automatic session and store it in our cookie string format
+             *  into the browser's local storage. This is used to restore the session data when the cookie
+             *  expires.
+             */
+            _self.backup = () => {
+                const session = _self.automaticSession;
+                _setStorage(session.id, session.acquisitionDate, session.renewalDate);
+            };
+        
+            /**
+             * Use config.namePrefix + ai_session cookie data or local storage data (when the cookie is unavailable) to
+             * initialize the automatic session.
+             * @returns true if values set otherwise false
+             */
+            function _initializeAutomaticSession(session: ISession, now: number): boolean {
+                let isValid = false;
+                const cookieValue = _cookieManager.get(_storageNamePrefix());
+                if (cookieValue && CoreUtils.isFunction(cookieValue.split)) {
+                    isValid = _initializeAutomaticSessionWithData(session, cookieValue);
+                } else {
+                    // There's no cookie, but we might have session data in local storage
+                    // This can happen if the session expired or the user actively deleted the cookie
+                    // We only want to recover data if the cookie is missing from expiry. We should respect the user's wishes if the cookie was deleted actively.
+                    // The User class handles this for us and deletes our local storage object if the persistent user cookie was removed.
+                    const storageValue = Util.getStorage(_logger, _storageNamePrefix());
+                    if (storageValue) {
+                        isValid = _initializeAutomaticSessionWithData(session, storageValue);
+                    }
+                }
+        
+                return isValid || !!session.id;
+            }
+        
+            /**
+             * Extract id, acquisitionDate, and renewalDate from an ai_session payload string and
+             * use this data to initialize automaticSession.
+             *
+             * @param {string} sessionData - The string stored in an ai_session cookie or local storage backup
+             * @returns true if values set otherwise false
+             */
+            function _initializeAutomaticSessionWithData(session: ISession, sessionData: string) {
+                let isValid = false;
+                const sessionReset = ", session will be reset";
+                const tokens = sessionData.split("|");
+        
+                if (tokens.length >= 2) {
+                    try {
+                        const acq = +tokens[1] || 0;
+                        const renewal = +tokens[2] || 0;
+                        if (isNaN(acq) || acq <= 0) {
+                            _logger.throwInternal(LoggingSeverity.WARNING,
+                                _InternalMessageId.SessionRenewalDateIsZero,
+                                "AI session acquisition date is 0" + sessionReset);
+                        } else if (isNaN(renewal) || renewal <= 0) {
+                            _logger.throwInternal(LoggingSeverity.WARNING,
+                                _InternalMessageId.SessionRenewalDateIsZero,
+                                "AI session renewal date is 0" + sessionReset);
+                        } else {
+                            // Only assign the values if everything looks good
+                            session.id = tokens[0];
+                            session.acquisitionDate = acq;
+                            session.renewalDate = renewal;
+                            isValid = true;
+                        }
+                    } catch (e) {
+                        _logger.throwInternal(LoggingSeverity.CRITICAL,
+                            _InternalMessageId.ErrorParsingAISessionCookie,
+                            "Error parsing ai_session value [" + (sessionData || "") + "]" + sessionReset + " - " + Util.getExceptionName(e),
+                            { exception: Util.dump(e) });
+                    }
+                }
+
+                return isValid;
+            }
+        
+            function _renew(now: number) {
+                _self.automaticSession.id = Util.newId((_self.config && _self.config.idLength) ? _self.config.idLength() : 22);
+                _self.automaticSession.acquisitionDate = now;
+        
+                _setCookie(_self.automaticSession, now);
+        
+                // If this browser does not support local storage, fire an internal log to keep track of it at this point
+                if (!Util.canUseLocalStorage()) {
+                    _logger.throwInternal(LoggingSeverity.WARNING,
+                        _InternalMessageId.BrowserDoesNotSupportLocalStorage,
+                        "Browser does not support local storage. Session durations will be inaccurate.");
+                }
+            }
+        
+            function _setCookie(session: ISession, now: number) {
+                let acq = session.acquisitionDate;
+                session.renewalDate = now
+
+                let config = _self.config;
+                let renewalPeriod = config.sessionRenewalMs();
+
+                // Set cookie to expire after the session expiry time passes or the session renewal deadline, whichever is sooner
+                // Expiring the cookie will cause the session to expire even if the user isn't on the page
+                const acqTimeLeft = (acq + config.sessionExpirationMs()) - now;
+                const cookie = [session.id, acq, now];
+                let maxAge = 0;
+        
+                if (acqTimeLeft < renewalPeriod) {
+                    maxAge = acqTimeLeft / 1000;
+                } else {
+                    maxAge = renewalPeriod / 1000;
+                }
+        
+                const cookieDomain = config.cookieDomain ? config.cookieDomain() : null;
+        
+                // if sessionExpirationMs is set to 0, it means the expiry is set to 0 for this session cookie
+                // A cookie with 0 expiry in the session cookie will never expire for that browser session.  If the browser is closed the cookie expires.  
+                // Depending on the browser, another instance does not inherit this cookie, however, another tab will
+                _cookieManager.set(_storageNamePrefix(), cookie.join('|'), cookieDomain, config.sessionExpirationMs() > 0 ? maxAge : null);
+                _cookieUpdatedTimestamp = now;
+            }
+        
+            function _setStorage(guid: string, acq: number, renewal: number) {
+                // Keep data in local storage to retain the last session id, allowing us to cleanly end the session when it expires
+                // Browsers that don't support local storage won't be able to end sessions cleanly from the client
+                // The server will notice this and end the sessions itself, with loss of accurate session duration
+                Util.setStorage(_logger, _storageNamePrefix(), [guid, acq, renewal].join('|'));
+            }
+        });
     }
 
     public update() {
-        if (!this.automaticSession.id) {
-            this.initializeAutomaticSession();
-        }
-
-        // Always using Date getTime() as there is a bug in older IE instances that causes the performance timings to have the hi-bit set eg 0x800000000 causing
-        // the number to be incorrect.
-        const now = new Date().getTime();
-
-        const acquisitionExpired = this.config.sessionExpirationMs() === 0 ? false : now - this.automaticSession.acquisitionDate > this.config.sessionExpirationMs();
-        const renewalExpired = this.config.sessionExpirationMs() === 0 ? false : now - this.automaticSession.renewalDate > this.config.sessionRenewalMs();
-
-        // renew if acquisitionSpan or renewalSpan has elapsed
-        if (acquisitionExpired || renewalExpired) {
-            // update automaticSession so session state has correct id
-            this.renew();
-        } else {
-            // do not update the cookie more often than cookieUpdateInterval
-            if (!this.cookieUpdatedTimestamp || now - this.cookieUpdatedTimestamp > _SessionManager.cookieUpdateInterval) {
-                this.automaticSession.renewalDate = now;
-                this.setCookie(this.automaticSession.id, this.automaticSession.acquisitionDate, this.automaticSession.renewalDate);
-            }
-        }
+        // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
     }
 
     /**
@@ -101,119 +246,6 @@ export class _SessionManager {
      *  expires.
      */
     public backup() {
-        this.setStorage(this.automaticSession.id, this.automaticSession.acquisitionDate, this.automaticSession.renewalDate);
-    }
-
-    /**
-     *  Use config.namePrefix + ai_session cookie data or local storage data (when the cookie is unavailable) to
-     *  initialize the automatic session.
-     */
-    private initializeAutomaticSession() {
-        const cookie = Util.getCookie(this._logger, this._storageNamePrefix());
-        if (cookie && typeof cookie.split === "function") {
-            this.initializeAutomaticSessionWithData(cookie);
-        } else {
-            // There's no cookie, but we might have session data in local storage
-            // This can happen if the session expired or the user actively deleted the cookie
-            // We only want to recover data if the cookie is missing from expiry. We should respect the user's wishes if the cookie was deleted actively.
-            // The User class handles this for us and deletes our local storage object if the persistent user cookie was removed.
-            const storage = Util.getStorage(this._logger, this._storageNamePrefix());
-            if (storage) {
-                this.initializeAutomaticSessionWithData(storage);
-            }
-        }
-
-        if (!this.automaticSession.id) {
-            this.renew();
-        }
-    }
-
-    /**
-     *  Extract id, acquisitionDate, and renewalDate from an ai_session payload string and
-     *  use this data to initialize automaticSession.
-     *
-     *  @param {string} sessionData - The string stored in an ai_session cookie or local storage backup
-     */
-    private initializeAutomaticSessionWithData(sessionData: string) {
-        const params = sessionData.split("|");
-
-        if (params.length > 0) {
-            this.automaticSession.id = params[0];
-        }
-
-        try {
-            if (params.length > 1) {
-                const acq = +params[1];
-                this.automaticSession.acquisitionDate = +new Date(acq);
-                this.automaticSession.acquisitionDate = this.automaticSession.acquisitionDate > 0 ? this.automaticSession.acquisitionDate : 0;
-            }
-
-            if (params.length > 2) {
-                const renewal = +params[2];
-                this.automaticSession.renewalDate = +new Date(renewal);
-                this.automaticSession.renewalDate = this.automaticSession.renewalDate > 0 ? this.automaticSession.renewalDate : 0;
-            }
-        } catch (e) {
-            this._logger.throwInternal(LoggingSeverity.CRITICAL,
-
-                _InternalMessageId.ErrorParsingAISessionCookie,
-                "Error parsing ai_session cookie, session will be reset: " + Util.getExceptionName(e),
-                { exception: Util.dump(e) });
-        }
-
-        if (this.automaticSession.renewalDate === 0) {
-            this._logger.throwInternal(LoggingSeverity.WARNING,
-                _InternalMessageId.SessionRenewalDateIsZero,
-                "AI session renewal date is 0, session will be reset.");
-        }
-    }
-
-    private renew() {
-        const now = new Date().getTime();
-
-        this.automaticSession.id = Util.newId((this.config && this.config.idLength) ? this.config.idLength() : 22);
-        this.automaticSession.acquisitionDate = now;
-        this.automaticSession.renewalDate = now;
-
-        this.setCookie(this.automaticSession.id, this.automaticSession.acquisitionDate, this.automaticSession.renewalDate);
-
-        // If this browser does not support local storage, fire an internal log to keep track of it at this point
-        if (!Util.canUseLocalStorage()) {
-            this._logger.throwInternal(LoggingSeverity.WARNING,
-                _InternalMessageId.BrowserDoesNotSupportLocalStorage,
-                "Browser does not support local storage. Session durations will be inaccurate.");
-        }
-    }
-
-    private setCookie(guid: string, acq: number, renewal: number) {
-        // Set cookie to expire after the session expiry time passes or the session renewal deadline, whichever is sooner
-        // Expiring the cookie will cause the session to expire even if the user isn't on the page
-        const acquisitionExpiry = acq + this.config.sessionExpirationMs();
-        const renewalExpiry = renewal + this.config.sessionRenewalMs();
-        const cookieExpiry = new Date();
-        const cookie = [guid, acq, renewal];
-
-        if (acquisitionExpiry < renewalExpiry) {
-            cookieExpiry.setTime(acquisitionExpiry);
-        } else {
-            cookieExpiry.setTime(renewalExpiry);
-        }
-
-        const cookieDomain = this.config.cookieDomain ? this.config.cookieDomain() : null;
-
-        // if sessionExpirationMs is set to 0, it means the expiry is set to 0 for this session cookie
-        // A cookie with 0 expiry in the session cookie will never expire for that browser session.  If the browser is closed the cookie expires.  
-        // Another browser instance does not inherit this cookie.
-        const UTCString = this.config.sessionExpirationMs() === 0 ? '0' : cookieExpiry.toUTCString();
-        Util.setCookie(this._logger, this._storageNamePrefix(), cookie.join('|') + ';expires=' + UTCString, cookieDomain);
-
-        this.cookieUpdatedTimestamp = new Date().getTime();
-    }
-
-    private setStorage(guid: string, acq: number, renewal: number) {
-        // Keep data in local storage to retain the last session id, allowing us to cleanly end the session when it expires
-        // Browsers that don't support local storage won't be able to end sessions cleanly from the client
-        // The server will notice this and end the sessions itself, with loss of accurate session duration
-        Util.setStorage(this._logger, this._storageNamePrefix(), [guid, acq, renewal].join('|'));
+        // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
     }
 }

@@ -9,9 +9,9 @@ import {
     ITelemetryPluginChain, objForEachKey
 } from '@microsoft/applicationinsights-core-js';
 import { TelemetryContext } from './TelemetryContext';
-import { PageView, ConfigurationManager,
-    IConfig, BreezeChannelIdentifier, PropertiesPluginIdentifier, IPropertiesPlugin, Extensions, Util } from '@microsoft/applicationinsights-common';
+import { PageView, IConfig, BreezeChannelIdentifier, PropertiesPluginIdentifier, IPropertiesPlugin, Extensions, Util } from '@microsoft/applicationinsights-common';
 import { ITelemetryConfig } from './Interfaces/ITelemetryConfig';
+import dynamicProto from "@microsoft/dynamicproto-js";
 
 export default class PropertiesPlugin extends BaseTelemetryPlugin implements IPropertiesPlugin {
 
@@ -35,87 +35,106 @@ export default class PropertiesPlugin extends BaseTelemetryPlugin implements IPr
 
     public priority = 110;
     public identifier = PropertiesPluginIdentifier;
-    private _breezeChannel: IPlugin; // optional. If exists, grab appId from it
 
-    private _extensionConfig: ITelemetryConfig;
+    constructor() {
+        super();
 
-    initialize(config: IConfiguration & IConfig, core: IAppInsightsCore, extensions: IPlugin[], pluginChain?:ITelemetryPluginChain) {
-        super.initialize(config, core, extensions, pluginChain);
-        let ctx = this._getTelCtx();
-        let identifier = this.identifier;
-        const defaultConfig: ITelemetryConfig = PropertiesPlugin.getDefaultConfig();
-        this._extensionConfig = this._extensionConfig || PropertiesPlugin.getDefaultConfig();
-        objForEachKey(defaultConfig, (field, value) => {
-            this._extensionConfig[field] = () => ctx.getConfig(identifier, field, value());
+        let _breezeChannel: IPlugin; // optional. If exists, grab appId from it
+        let _extensionConfig: ITelemetryConfig;
+
+        dynamicProto(PropertiesPlugin, this, (_self, _base) => {
+
+            _self.initialize = (config: IConfiguration & IConfig, core: IAppInsightsCore, extensions: IPlugin[], pluginChain?:ITelemetryPluginChain) => {
+                _base.initialize(config, core, extensions, pluginChain);
+                let ctx = _self._getTelCtx();
+                let identifier = _self.identifier;
+                const defaultConfig: ITelemetryConfig = PropertiesPlugin.getDefaultConfig();
+                _extensionConfig = _extensionConfig || PropertiesPlugin.getDefaultConfig();
+                objForEachKey(defaultConfig, (field, value) => {
+                    _extensionConfig[field] = () => ctx.getConfig(identifier, field, value());
+                });
+    
+                _self.context = new TelemetryContext(core, _extensionConfig);
+                _breezeChannel = Util.getExtension(extensions, BreezeChannelIdentifier);
+                _self.context.appId = () => _breezeChannel ? _breezeChannel["_appId"] : null;
+            };
+    
+            /**
+             * Add Part A fields to the event
+             * @param event The event that needs to be processed
+             */
+            _self.processTelemetry = (event: ITelemetryItem, itemCtx?: IProcessTelemetryContext) => {
+                if (CoreUtils.isNullOrUndefined(event)) {
+                    // TODO(barustum): throw an internal event once we have support for internal logging
+                } else {
+                    itemCtx = _self._getTelCtx(itemCtx);
+                    // If the envelope is PageView, reset the internal message count so that we can send internal telemetry for the new page.
+                    if (event.name === PageView.envelopeType) {
+                        itemCtx.diagLog().resetInternalMessageCount();
+                    }
+    
+                    if (_self.context.session) {
+                        // If customer did not provide custom session id update the session manager
+                        if (typeof _self.context.session.id !== "string") {
+                            _self.context.sessionManager.update();
+                        }
+                    }
+    
+                    _processTelemetryInternal(event, itemCtx);
+    
+                    if (_self.context && _self.context.user && _self.context.user.isNewUser) {
+                        _self.context.user.isNewUser = false;
+                        const message = new _InternalLogMessage(_InternalMessageId.SendBrowserInfoOnUserInit, ((getNavigator()||{} as any).userAgent||""));
+                        itemCtx.diagLog().logInternalMessage(LoggingSeverity.CRITICAL, message);
+                    }
+    
+                    _self.processNext(event, itemCtx);
+                }
+            };
+    
+            function _processTelemetryInternal(event: ITelemetryItem, itemCtx: IProcessTelemetryContext) {
+                // set part A  fields
+                if (!event.tags) {
+                    event.tags = [];
+                }
+    
+                if (!event.ext) {
+                    event.ext = {};
+                }
+    
+                let ext = event.ext;
+                ext[Extensions.DeviceExt] = ext[Extensions.DeviceExt] || {};
+                ext[Extensions.WebExt] = ext[Extensions.WebExt] || {};
+                ext[Extensions.UserExt] = ext[Extensions.UserExt] || {};
+                ext[Extensions.OSExt] = ext[Extensions.OSExt] || {};
+                ext[Extensions.AppExt] = ext[Extensions.AppExt] || {};
+                ext[Extensions.TraceExt] = ext[Extensions.TraceExt] || {};
+    
+                let context = _self.context;
+                context.applySessionContext(event, itemCtx);
+                context.applyApplicationContext(event, itemCtx);
+                context.applyDeviceContext(event, itemCtx);
+                context.applyOperationContext(event, itemCtx);
+                context.applyUserContext(event, itemCtx);
+                context.applyOperatingSystemContxt(event, itemCtx);
+                context.applyWebContext(event, itemCtx);
+    
+                context.applyLocationContext(event, itemCtx); // legacy tags
+                context.applyInternalContext(event, itemCtx); // legacy tags
+                context.cleanUp(event, itemCtx);
+            }
         });
+    }
 
-        this.context = new TelemetryContext(core.logger, this._extensionConfig);
-        this._breezeChannel = Util.getExtension(extensions, BreezeChannelIdentifier);
-        this.context.appId = () => this._breezeChannel ? this._breezeChannel["_appId"] : null;
+    public initialize(config: IConfiguration & IConfig, core: IAppInsightsCore, extensions: IPlugin[], pluginChain?:ITelemetryPluginChain) {
+        // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
     }
 
     /**
      * Add Part A fields to the event
      * @param event The event that needs to be processed
      */
-    processTelemetry(event: ITelemetryItem, itemCtx?: IProcessTelemetryContext) {
-        if (CoreUtils.isNullOrUndefined(event)) {
-            // TODO(barustum): throw an internal event once we have support for internal logging
-        } else {
-            itemCtx = this._getTelCtx(itemCtx);
-            // If the envelope is PageView, reset the internal message count so that we can send internal telemetry for the new page.
-            if (event.name === PageView.envelopeType) {
-                itemCtx.diagLog().resetInternalMessageCount();
-            }
-
-            if (this.context.session) {
-                // If customer did not provide custom session id update the session manager
-                if (typeof this.context.session.id !== "string") {
-                    this.context.sessionManager.update();
-                }
-            }
-
-            this._processTelemetryInternal(event, itemCtx);
-
-            if (this.context && this.context.user && this.context.user.isNewUser) {
-                this.context.user.isNewUser = false;
-                const message = new _InternalLogMessage(_InternalMessageId.SendBrowserInfoOnUserInit, ((getNavigator()||{} as any).userAgent||""));
-                itemCtx.diagLog().logInternalMessage(LoggingSeverity.CRITICAL, message);
-            }
-
-            this.processNext(event, itemCtx);
-        }
-    }
-
-    private _processTelemetryInternal(event: ITelemetryItem, itemCtx: IProcessTelemetryContext) {
-        // set part A  fields
-        if (!event.tags) {
-            event.tags = [];
-        }
-
-        if (!event.ext) {
-            event.ext = {};
-        }
-
-        let ext = event.ext;
-        ext[Extensions.DeviceExt] = ext[Extensions.DeviceExt] || {};
-        ext[Extensions.WebExt] = ext[Extensions.WebExt] || {};
-        ext[Extensions.UserExt] = ext[Extensions.UserExt] || {};
-        ext[Extensions.OSExt] = ext[Extensions.OSExt] || {};
-        ext[Extensions.AppExt] = ext[Extensions.AppExt] || {};
-        ext[Extensions.TraceExt] = ext[Extensions.TraceExt] || {};
-
-        let context = this.context;
-        context.applySessionContext(event, itemCtx);
-        context.applyApplicationContext(event, itemCtx);
-        context.applyDeviceContext(event, itemCtx);
-        context.applyOperationContext(event, itemCtx);
-        context.applyUserContext(event, itemCtx);
-        context.applyOperatingSystemContxt(event, itemCtx);
-        context.applyWebContext(event, itemCtx);
-
-        context.applyLocationContext(event, itemCtx); // legacy tags
-        context.applyInternalContext(event, itemCtx); // legacy tags
-        context.cleanUp(event, itemCtx);
+    public processTelemetry(event: ITelemetryItem, itemCtx?: IProcessTelemetryContext) {
+       // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
     }
 }

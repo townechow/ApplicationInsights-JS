@@ -5,8 +5,7 @@ import { StorageType } from "./Enums";
 import {
     CoreUtils, EventHelper, _InternalMessageId, LoggingSeverity, IDiagnosticLogger, IPlugin, getCrypto, getMsCrypto,
     getGlobal, getGlobalInst, getWindow, getDocument, getNavigator, getPerformance, getLocation, hasJSON, getJSON,
-    strPrototype,
-    objForEachKey
+    strPrototype, getExceptionName as coreGetExceptionName, dumpObj, gblCookieMgr, uaDisallowsSameSiteNone, objForEachKey
 } from "@microsoft/applicationinsights-core-js";
 import { RequestHeaders } from "./RequestResponseHeaders";
 import { DataSanitizer } from "./Telemetry/Common/DataSanitizer";
@@ -14,7 +13,6 @@ import { ICorrelationConfig } from "./Interfaces/ICorrelationConfig";
 
 let _navigator = getNavigator();
 let _isString = CoreUtils.isString;
-let _uaDisallowsSameSiteNone: boolean = null;
 
 function _endsWith(value: string, search: string) {
     let len = value.length;
@@ -139,8 +137,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserCannotReadLocalStorage,
-                    "Browser failed read of local storage. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed read of local storage. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return null;
@@ -165,8 +163,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserCannotWriteLocalStorage,
-                    "Browser failed write to local storage. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed write to local storage. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return false;
@@ -190,8 +188,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserFailedRemovalFromLocalStorage,
-                    "Browser failed removal of local storage item. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed removal of local storage item. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return false;
@@ -256,8 +254,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserCannotReadSessionStorage,
-                    "Browser failed read of session storage. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed read of session storage. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return null;
@@ -282,8 +280,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserCannotWriteSessionStorage,
-                    "Browser failed write to session storage. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed write to session storage. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return false;
@@ -307,8 +305,8 @@ export class Util {
                 logger.throwInternal(
                     LoggingSeverity.WARNING,
                     _InternalMessageId.BrowserFailedRemovalFromSessionStorage,
-                    "Browser failed removal of session storage item. " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
+                    "Browser failed removal of session storage item. " + coreGetExceptionName(e),
+                    { exception: dumpObj(e) });
             }
         }
         return false;
@@ -318,115 +316,24 @@ export class Util {
      * Force the SDK not to store and read any data from cookies
      */
     public static disableCookies() {
-        CoreUtils.disableCookies();
+        // Now disables cookies but doesn't reset whether cookie support is available
+        gblCookieMgr().disable();
     }
 
     /*
-     * helper method to tell if document.cookie object is available
+     * Helper method to tell if document.cookie object is available and whether it can be used
      */
     public static canUseCookies(logger: IDiagnosticLogger): any {
-        if (CoreUtils._canUseCookies === undefined) {
-            CoreUtils._canUseCookies = false;
-
-            try {
-                CoreUtils._canUseCookies = Util.document.cookie !== undefined;
-            } catch (e) {
-                logger.throwInternal(
-                    LoggingSeverity.WARNING,
-                    _InternalMessageId.CannotAccessCookie,
-                    "Cannot access document.cookie - " + Util.getExceptionName(e),
-                    { exception: Util.dump(e) });
-            };
-        }
-
-        return CoreUtils._canUseCookies;
+        return gblCookieMgr(logger).isEnabled();
     }
 
-    public static disallowsSameSiteNone(userAgent: string) {
-        if (!_isString(userAgent)) {
-            return false;
-        }
-
-        // Cover all iOS based browsers here. This includes:
-        // - Safari on iOS 12 for iPhone, iPod Touch, iPad
-        // - WkWebview on iOS 12 for iPhone, iPod Touch, iPad
-        // - Chrome on iOS 12 for iPhone, iPod Touch, iPad
-        // All of which are broken by SameSite=None, because they use the iOS networking stack
-        if (userAgent.indexOf("CPU iPhone OS 12") !== -1 || userAgent.indexOf("iPad; CPU OS 12") !== -1) {
-            return true;
-        }
-
-        // Cover Mac OS X based browsers that use the Mac OS networking stack. This includes:
-        // - Safari on Mac OS X
-        // This does not include:
-        // - Internal browser on Mac OS X
-        // - Chrome on Mac OS X
-        // - Chromium on Mac OS X
-        // Because they do not use the Mac OS networking stack.
-        if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && userAgent.indexOf("Version/") !== -1 && userAgent.indexOf("Safari") !== -1) {
-            return true;
-        }
-
-        // Cover Mac OS X internal browsers that use the Mac OS networking stack. This includes:
-        // - Internal browser on Mac OS X
-        // This does not include:
-        // - Safari on Mac OS X
-        // - Chrome on Mac OS X
-        // - Chromium on Mac OS X
-        // Because they do not use the Mac OS networking stack.
-        if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && _endsWith(userAgent, "AppleWebKit/605.1.15 (KHTML, like Gecko)")) {
-            return true;
-        }
-
-        // Cover Chrome 50-69, because some versions are broken by SameSite=None, and none in this range require it.
-        // Note: this covers some pre-Chromium Edge versions, but pre-Chromim Edge does not require SameSite=None, so this is fine.
-        // Note: this regex applies to Windows, Mac OS X, and Linux, deliberately.
-        if (userAgent.indexOf("Chrome/5") !== -1 || userAgent.indexOf("Chrome/6") !== -1) {
-            return true;
-        }
-
-        // Unreal Engine runs Chromium 59, but does not advertise as Chrome until 4.23. Treat versions of Unreal
-        // that don't specify their Chrome version as lacking support for SameSite=None.
-        if (userAgent.indexOf("UnrealEngine") !== -1 && userAgent.indexOf("Chrome") === -1) {
-            return true;
-        }
-
-        // UCBrowser < 12.13.2 ignores Set-Cookie headers with SameSite=None
-        // NB: this rule isn't complete - you need regex to make a complete rule.
-        // See: https://www.chromium.org/updates/same-site/incompatible-clients
-        if (userAgent.indexOf("UCBrowser/12") !== -1 || userAgent.indexOf("UCBrowser/11") !== -1) {
-            return true;
-        }
-
-        return false;
-    }
+    public static disallowsSameSiteNone = uaDisallowsSameSiteNone;
 
     /**
      * helper method to set userId and sessionId cookie
      */
     public static setCookie(logger: IDiagnosticLogger, name: string, value: string, domain?: string) {
-        if (Util.canUseCookies(logger)) {
-            let domainAttrib = "";
-            let secureAttrib = "";
-
-            if (domain) {
-                domainAttrib = ";domain=" + domain;
-            }
-
-            let location = getLocation();
-            if (location && location.protocol === "https:") {
-                secureAttrib = ";secure";
-                if (_uaDisallowsSameSiteNone === null) {
-                    _uaDisallowsSameSiteNone = Util.disallowsSameSiteNone((getNavigator() || {} as Navigator).userAgent);
-                }
-
-                if (!_uaDisallowsSameSiteNone) {
-                    value = value + ";SameSite=None"; // SameSite can only be set on secure pages
-                }
-            }
-
-            Util.document.cookie = name + "=" + value + domainAttrib + ";path=/" + secureAttrib;
-        }
+        gblCookieMgr(logger).set(name, value, domain);
     }
 
     public static stringToBoolOrDefault(str: any, defaultValue = false): boolean {
@@ -441,25 +348,7 @@ export class Util {
      * helper method to access userId and sessionId cookie
      */
     public static getCookie(logger: IDiagnosticLogger, name: string) {
-        if (!Util.canUseCookies(logger)) {
-            return;
-        }
-
-        let value = "";
-        if (name && name.length) {
-            const cookieName = name + "=";
-            const cookies = Util.document.cookie.split(";");
-            for (let i = 0; i < cookies.length; i++) {
-                let cookie = cookies[i];
-                cookie = Util.trim(cookie);
-                if (cookie && cookie.indexOf(cookieName) === 0) {
-                    value = cookie.substring(cookieName.length, cookies[i].length);
-                    break;
-                }
-            }
-        }
-
-        return value;
+        return gblCookieMgr(logger).get(name);
     }
 
     /**
@@ -467,10 +356,7 @@ export class Util {
      * @param name - The name of the cookie to delete.
      */
     public static deleteCookie(logger: IDiagnosticLogger, name: string) {
-        if (Util.canUseCookies(logger)) {
-            // Setting the expiration date in the past immediately removes the cookie
-            Util.document.cookie = name + "=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-        }
+        return gblCookieMgr(logger).del(name);
     }
 
     /**
@@ -558,35 +444,19 @@ export class Util {
      * Checks if error has no meaningful data inside. Ususally such errors are received by window.onerror when error
      * happens in a script from other domain (cross origin, CORS).
      */
-    public static isCrossOriginError(message: string, url: string, lineNumber: number, columnNumber: number, error: Error): boolean {
-        return (message === "Script error." || message === "Script error") && !error;
+    public static isCrossOriginError(message: string|Event, url: string, lineNumber: number, columnNumber: number, error: Error): boolean {
+        return !error && _isString(message) && (message === "Script error." || message === "Script error");
     }
 
     /**
      * Returns string representation of an object suitable for diagnostics logging.
      */
-    public static dump(object: any): string {
-        const objectTypeDump: string = Object[strPrototype].toString.call(object);
-        let propertyValueDump: string = "";
-        if (objectTypeDump === "[object Error]") {
-            propertyValueDump = "{ stack: '" + object.stack + "', message: '" + object.message + "', name: '" + object.name + "'";
-        } else if (hasJSON()) {
-            propertyValueDump = getJSON().stringify(object);
-        }
-
-        return objectTypeDump + propertyValueDump;
-    }
+    public static dump = dumpObj;
 
     /**
      * Returns the name of object if it's an Error. Otherwise, returns empty string.
      */
-    public static getExceptionName(object: any): string {
-        const objectTypeDump: string = Object[strPrototype].toString.call(object);
-        if (objectTypeDump === "[object Error]") {
-            return object.name;
-        }
-        return "";
-    }
+    public static getExceptionName = coreGetExceptionName;
 
     /**
      * Adds an event handler for the specified event to the window
