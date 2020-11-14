@@ -3,7 +3,7 @@ import { IConfig, PageViewPerformance, SeverityLevel, Util,
     IAutoExceptionTelemetry, IDependencyTelemetry, IExceptionTelemetry,
     IEventTelemetry, IEnvelope, ProcessLegacy, HttpMethod } from "@microsoft/applicationinsights-common";
 import { Snippet, Initialization as ApplicationInsights } from "./Initialization";
-import { ITelemetryItem, IDiagnosticLogger, IConfiguration, CoreUtils, objForEachKey } from "@microsoft/applicationinsights-core-js";
+import { ITelemetryItem, IDiagnosticLogger, IConfiguration, objForEachKey, isString } from "@microsoft/applicationinsights-core-js";
 
 // ToDo: fix properties and measurements once updates are done to common
 export class AppInsightsDeprecated implements IAppInsightsDeprecated {
@@ -171,7 +171,7 @@ export class AppInsightsDeprecated implements IAppInsightsDeprecated {
         // apply full appInsights to the global instance
         // Note: This must be called before loadAppInsights is called
         objForEachKey(this, (field, value) => {
-            if (CoreUtils.isString(field)) {
+            if (isString(field)) {
                 snippet[field as string] = value;
             }
         });

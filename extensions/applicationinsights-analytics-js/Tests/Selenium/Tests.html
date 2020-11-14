@@ -37,6 +37,9 @@
         // Load Common
         modules.add("@microsoft/applicationinsights-common", "./node_modules/@microsoft/applicationinsights-common/browser/applicationinsights-common");
 
+        // Load Properties
+        modules.add("@microsoft/applicationinsights-properties-js", "./node_modules/@microsoft/applicationinsights-properties-js/browser/applicationinsights-properties-js");
+
         var testModule = modules.add("Tests/Selenium/appinsights-analytics.tests", "./appinsights-analytics.tests.js")
         testModule.run = function (tests) {
             console && console.log("Starting tests");

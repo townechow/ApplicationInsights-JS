@@ -18,10 +18,10 @@ import {
     SampleRate
 } from '@microsoft/applicationinsights-common';
 import {
-    ITelemetryItem, IProcessTelemetryContext, IConfiguration, CoreUtils,
+    ITelemetryItem, IProcessTelemetryContext, IConfiguration,
     _InternalMessageId, LoggingSeverity, IDiagnosticLogger, IAppInsightsCore, IPlugin,
     getWindow, getNavigator, getJSON, BaseTelemetryPlugin, ITelemetryPluginChain, INotificationManager,
-    SendRequestReason, getGlobalInst, objForEachKey
+    SendRequestReason, getGlobalInst, objForEachKey, isNullOrUndefined, arrForEach, dateNow
 } from '@microsoft/applicationinsights-core-js';
 import { Offline } from './Offline';
 import { Sample } from './TelemetryProcessors/Sample'
@@ -48,7 +48,7 @@ export class Sender extends BaseTelemetryPlugin implements IChannelControlsAI {
 
     public static constructEnvelope(orig: ITelemetryItem, iKey: string, logger: IDiagnosticLogger): IEnvelope {
         let envelope: ITelemetryItem;
-        if (iKey !== orig.iKey && !CoreUtils.isNullOrUndefined(iKey)) {
+        if (iKey !== orig.iKey && !isNullOrUndefined(iKey)) {
             envelope = {
                 ...orig,
                 iKey
@@ -301,7 +301,7 @@ export class Sender extends BaseTelemetryPlugin implements IChannelControlsAI {
                     let doNotSendItem = false;
                     // this is for running in legacy mode, where customer may already have a custom initializer present
                     if (telemetryItem.tags && telemetryItem.tags[ProcessLegacy]) {
-                        CoreUtils.arrForEach(telemetryItem.tags[ProcessLegacy], (callBack: (env: IEnvelope) => boolean | void) => {
+                        arrForEach(telemetryItem.tags[ProcessLegacy], (callBack: (env: IEnvelope) => boolean | void) => {
                             try {
                                 if (callBack && callBack(aiEnvelope) === false) {
                                     doNotSendItem = true;
@@ -658,7 +658,7 @@ export class Sender extends BaseTelemetryPlugin implements IChannelControlsAI {
                 }
         
                 // TODO: Log the backoff time like the C# version does.
-                const retryAfterTimeSpan = CoreUtils.dateNow() + (delayInSeconds * 1000);
+                const retryAfterTimeSpan = dateNow() + (delayInSeconds * 1000);
         
                 // TODO: Log the retry at time like the C# version does.
                 _retryAt = retryAfterTimeSpan;
@@ -669,7 +669,7 @@ export class Sender extends BaseTelemetryPlugin implements IChannelControlsAI {
              */
             function _setupTimer() {
                 if (!_timeoutHandle) {
-                    const retryInterval = _retryAt ? Math.max(0, _retryAt - CoreUtils.dateNow()) : 0;
+                    const retryInterval = _retryAt ? Math.max(0, _retryAt - dateNow()) : 0;
                     const timerValue = Math.max(_self._senderConfig.maxBatchInterval(), retryInterval);
         
                     _timeoutHandle = setTimeout(() => {
@@ -774,7 +774,7 @@ export class Sender extends BaseTelemetryPlugin implements IChannelControlsAI {
              * Specs taken from https://tools.ietf.org/html/rfc4122 and breeze repo 
              */
             function _validateInstrumentationKey(config: IConfiguration & IConfig) :boolean {
-                const disableIKeyValidationFlag = CoreUtils.isNullOrUndefined(config.disableInstrumentaionKeyValidation) ? false : config.disableInstrumentaionKeyValidation;
+                const disableIKeyValidationFlag = isNullOrUndefined(config.disableInstrumentaionKeyValidation) ? false : config.disableInstrumentaionKeyValidation;
                 if(disableIKeyValidationFlag) {
                     return true;
                 }

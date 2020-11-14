@@ -3,7 +3,7 @@
 
 import { ITelemetryConfig } from '../Interfaces/ITelemetryConfig';
 import { Util, IUser } from '@microsoft/applicationinsights-common';
-import { _InternalMessageId, LoggingSeverity, CoreUtils, IAppInsightsCore, ICookieManager, gblCookieMgr } from '@microsoft/applicationinsights-core-js';
+import { _InternalMessageId, LoggingSeverity, CoreUtils, IAppInsightsCore, ICookieMgr, CookieMgr, DiagnosticLogger } from '@microsoft/applicationinsights-core-js';
 import dynamicProto from "@microsoft/dynamicproto-js";
 
 export class User implements IUser {
@@ -45,8 +45,8 @@ export class User implements IUser {
     public isNewUser = false;
 
     constructor(config: ITelemetryConfig, core: IAppInsightsCore) {
-        let _logger = (core || {} as IAppInsightsCore).logger;
-        let _cookieManager: ICookieManager = (core ? core.getCookieMgr() : null) || gblCookieMgr();
+        let _logger = (core || {} as IAppInsightsCore).logger || new DiagnosticLogger();
+        let _cookieManager: ICookieMgr = (core ? core.getCookieMgr() : null) || new CookieMgr({}, _logger);
 
         dynamicProto(User, this, (_self) => {
             // get userId or create new one if none exists

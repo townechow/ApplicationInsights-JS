@@ -1,0 +1,26 @@
+{
+    "name": "@microsoft/applicationinsights-rollup-plugin-uglify3-js",
+    "author": "Microsoft Corporation",
+    "version": "1.0.0",
+    "description": "Microsoft Application Insights JavaScript SDK - Rollup Plugin for Uglify3 support",
+    "keywords": [
+        "azure",
+        "cloud",
+        "microsoft",
+        "application insights",
+        "rollup",
+        "rollup-plugin"
+    ],
+    "scripts": {
+        "clean": "grunt clean",
+        "build": ""
+    },
+    "license": "MIT",
+    "sideEffects": false,
+    "devDependencies": {
+        "grunt": "^1.0.1"
+    },
+    "dependencies": {
+        "uglify-js": "^3.11.0"
+    }
+}

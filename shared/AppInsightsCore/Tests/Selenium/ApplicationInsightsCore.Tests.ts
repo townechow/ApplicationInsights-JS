@@ -2,12 +2,11 @@
 /// <reference path="../../src/JavaScriptSDK/AppInsightsCore.ts" />
 /// <reference path="../../src/applicationinsights-core-js.ts" />
 
-import { IConfiguration, ITelemetryPlugin, ITelemetryItem, IPlugin, CoreUtils, IAppInsightsCore, getCrypto, getMsCrypto } from "../../src/applicationinsights-core-js"
+import { IConfiguration, ITelemetryPlugin, ITelemetryItem, IPlugin, CoreUtils, IAppInsightsCore, normalizeJsName } from "../../src/applicationinsights-core-js"
 import { AppInsightsCore } from "../../src/JavaScriptSDK/AppInsightsCore";
 import { IChannelControls } from "../../src/JavaScriptSDK.Interfaces/IChannelControls";
 import { _InternalMessageId, LoggingSeverity } from "../../src/JavaScriptSDK.Enums/LoggingEnums";
 import { _InternalLogMessage, DiagnosticLogger } from "../../src/JavaScriptSDK/DiagnosticLogger";
-import { normalizeJsName } from "../../src/JavaScriptSDK/CoreUtils";
 
 const AIInternalMessagePrefix = "AITR_";
 const MaxInt32 = 0xFFFFFFFF;

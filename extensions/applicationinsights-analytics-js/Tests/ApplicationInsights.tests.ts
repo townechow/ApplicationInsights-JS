@@ -5,6 +5,7 @@ import {
     ITelemetryItem, AppInsightsCore,
     IPlugin, IConfiguration
 } from "@microsoft/applicationinsights-core-js";
+import { PropertiesPlugin } from "@microsoft/applicationinsights-properties-js";
 import { ApplicationInsights } from "../src/JavaScriptSDK/ApplicationInsights";
 
 export class ApplicationInsightsTests extends TestClass {
@@ -57,9 +58,8 @@ export class ApplicationInsightsTests extends TestClass {
                 appInsights.autoRoutePVDelay = 500;
                 const core = new AppInsightsCore();
                 const channel = new ChannelPlugin();
-                appInsights['_properties'] = ({
-                    context: { telemetryTrace: { traceID: 'not set', name: 'name not set' } }
-                } as any)
+                const properties = new PropertiesPlugin();
+                properties.context = { telemetryTrace: { traceID: 'not set', name: 'name not set' } };
                 appInsights['_prevUri'] = "firstUri";
                 appInsights['_currUri'] = "secondUri";
                 const trackPageViewStub = this.sandbox.stub(appInsights, 'trackPageView');
@@ -68,16 +68,16 @@ export class ApplicationInsightsTests extends TestClass {
                 core.initialize({
                     instrumentationKey: '',
                     enableAutoRouteTracking: true
-                } as IConfig & IConfiguration, [appInsights, channel]);
+                } as IConfig & IConfiguration, [appInsights, channel, properties]);
                 window.dispatchEvent(Util.createDomEvent('locationchange'));
                 this.clock.tick(500);
 
                 // Assert
                 Assert.ok(trackPageViewStub.calledOnce);
-                Assert.ok(appInsights['_properties'].context.telemetryTrace.traceID);
-                Assert.ok(appInsights['_properties'].context.telemetryTrace.name);
-                Assert.notEqual(appInsights['_properties'].context.telemetryTrace.traceID, 'not set', 'current operation id is updated after route change');
-                Assert.notEqual(appInsights['_properties'].context.telemetryTrace.name, 'name not set', 'current operation name is updated after route change');
+                Assert.ok(properties.context.telemetryTrace.traceID);
+                Assert.ok(properties.context.telemetryTrace.name);
+                Assert.notEqual(properties.context.telemetryTrace.traceID, 'not set', 'current operation id is updated after route change');
+                Assert.notEqual(properties.context.telemetryTrace.name, 'name not set', 'current operation name is updated after route change');
                 Assert.equal(appInsights['_prevUri'], 'secondUri', "the previous uri is stored on variable _prevUri");
                 Assert.equal(appInsights['_currUri'], window.location.href, "the current uri is stored on variable _currUri");
                 Assert.equal(appInsights['_prevUri'], trackPageViewStub.args[0][0].refUri, "previous uri is assigned to refUri and send as an argument of trackPageview method");
@@ -92,9 +92,8 @@ export class ApplicationInsightsTests extends TestClass {
                 appInsights.autoRoutePVDelay = 500;
                 const core = new AppInsightsCore();
                 const channel = new ChannelPlugin();
-                appInsights['_properties'] = ({
-                    context: { telemetryTrace: { traceID: 'not set', name: 'name not set' } }
-                } as any)
+                const properties = new PropertiesPlugin();
+                properties.context = { telemetryTrace: { traceID: 'not set', name: 'name not set' } };
                 appInsights['_prevUri'] = "firstUri";
                 const trackPageViewStub = this.sandbox.stub(appInsights, 'trackPageView');
 
@@ -102,7 +101,7 @@ export class ApplicationInsightsTests extends TestClass {
                 core.initialize({
                     instrumentationKey: '',
                     enableAutoRouteTracking: true
-                } as IConfig & IConfiguration, [appInsights, channel]);
+                } as IConfig & IConfiguration, [appInsights, channel, properties]);
                 window.dispatchEvent(Util.createDomEvent('locationchange'));
                 this.clock.tick(200);
 
@@ -113,10 +112,10 @@ export class ApplicationInsightsTests extends TestClass {
 
                 // Assert
                 Assert.ok(trackPageViewStub.calledTwice);
-                Assert.ok(appInsights['_properties'].context.telemetryTrace.traceID);
-                Assert.ok(appInsights['_properties'].context.telemetryTrace.name);
-                Assert.notEqual(appInsights['_properties'].context.telemetryTrace.traceID, 'not set', 'current operation id is updated after route change');
-                Assert.notEqual(appInsights['_properties'].context.telemetryTrace.name, 'name not set', 'current operation name is updated after route change');
+                Assert.ok(properties.context.telemetryTrace.traceID);
+                Assert.ok(properties.context.telemetryTrace.name);
+                Assert.notEqual(properties.context.telemetryTrace.traceID, 'not set', 'current operation id is updated after route change');
+                Assert.notEqual(properties.context.telemetryTrace.name, 'name not set', 'current operation name is updated after route change');
                 // first trackPageView event
                 Assert.equal(trackPageViewStub.args[0][0].refUri, 'firstUri', "first trackPageview event: refUri grabs the value of existing _prevUri");
                 Assert.equal(appInsights['_currUri'], window.location.href, "first trackPageview event: the current uri is stored on variable _currUri");
@@ -136,9 +135,8 @@ export class ApplicationInsightsTests extends TestClass {
                 const appInsights = new ApplicationInsights();
                 const core = new AppInsightsCore();
                 const channel = new ChannelPlugin();
-                appInsights['_properties'] = ({
-                    context: { telemetryTrace: { traceID: 'not set'}}
-                } as any)
+                const properties = new PropertiesPlugin();
+                properties.context = { telemetryTrace: { traceID: 'not set'} };
                 this.sandbox.stub(appInsights, 'trackPageView');
 
                 // Act
@@ -236,7 +234,9 @@ export class ApplicationInsightsTests extends TestClass {
                 Assert.equal(12, appInsights.config.samplingPercentage);
                 Assert.notEqual('aaa', appInsights.config.accountId);
                 Assert.equal('def', appInsights.config.accountId);
-                Assert.equal('instrumentation_key', appInsights['_globalconfig'].instrumentationKey);
+                Assert.equal('instrumentation_key', appInsights['config'].instrumentationKey);
+                Assert.equal(30 * 60 * 1000, appInsights['config'].sessionRenewalMs);
+                Assert.equal(24 * 60 * 60 * 1000, appInsights['config'].sessionExpirationMs);
             }
         });
 

@@ -7,9 +7,10 @@ import {
     AppInsightsCore,
     IAppInsightsCore,
     _InternalMessageId,
-    CoreUtils,
     ITelemetryItem,
-    SendRequestReason
+    SendRequestReason,
+    isNullOrUndefined,
+    arrForEach
 } from "@microsoft/applicationinsights-core-js";
 import { IConfig } from "@microsoft/applicationinsights-common";
 import { Sender } from "@microsoft/applicationinsights-channel-js";
@@ -32,8 +33,8 @@ export class ApplicationInsights {
     constructor(config: IConfiguration & IConfig) {
         // initialize the queue and config in case they are undefined
         if (
-            CoreUtils.isNullOrUndefined(config) ||
-            CoreUtils.isNullOrUndefined(config.instrumentationKey)
+            isNullOrUndefined(config) ||
+            isNullOrUndefined(config.instrumentationKey)
         ) {
             throw new Error("Invalid input configuration");
         }
@@ -80,8 +81,8 @@ export class ApplicationInsights {
      * @memberof ApplicationInsights
      */
     public flush(async: boolean = true) {
-        CoreUtils.arrForEach(this.core.getTransmissionControls(), controls => {
-            CoreUtils.arrForEach(controls, plugin => {
+        arrForEach(this.core.getTransmissionControls(), controls => {
+            arrForEach(controls, plugin => {
                 async
                     ? (plugin as Sender).flush()
                     : (plugin as Sender).triggerSend(async, null, SendRequestReason.ManualFlush);

@@ -16,11 +16,16 @@ export { SendRequestReason } from "./JavaScriptSDK.Enums/SendRequestReason";
 export { AppInsightsCore } from "./JavaScriptSDK/AppInsightsCore";
 export { BaseCore } from './JavaScriptSDK/BaseCore';
 export { BaseTelemetryPlugin } from './JavaScriptSDK/BaseTelemetryPlugin';
-export { CoreUtils, EventHelper, Undefined, normalizeJsName, getExceptionName, dumpObj, uaDisallowsSameSiteNone, objForEachKey, strEndsWith } from "./JavaScriptSDK/CoreUtils";
+export { CoreUtils, EventHelper, Undefined, addEventHandler } from "./JavaScriptSDK/CoreUtils";
+export {
+    isTypeof, isUndefined, isNullOrUndefined, hasOwnProperty, isObject, isFunction, attachEvent, detachEvent, normalizeJsName, 
+    objForEachKey, strEndsWith, isDate, isArray, isError, isString, isNumber, isBoolean, toISOString, arrForEach, arrIndexOf, 
+    arrMap, arrReduce, strTrim, objKeys, objDefineAccessors, dateNow, getExceptionName
+} from './JavaScriptSDK/HelperFuncs';
 export { 
     getGlobal, getGlobalInst, hasWindow, getWindow, hasDocument, getDocument, getCrypto, getMsCrypto,
     hasNavigator, getNavigator, hasHistory, getHistory, getLocation, getPerformance, hasJSON, getJSON,
-    isReactNative, getConsole, strUndefined, strObject, strPrototype, strFunction
+    isReactNative, getConsole, dumpObj, strUndefined, strObject, strPrototype, strFunction
 } from "./JavaScriptSDK/EnvUtils";
 export { NotificationManager } from "./JavaScriptSDK/NotificationManager";
 export { INotificationManager } from "./JavaScriptSDK.Interfaces/INotificationManager";
@@ -32,5 +37,5 @@ export { ProcessTelemetryContext } from './JavaScriptSDK/ProcessTelemetryContext
 export { initializePlugins, sortPlugins } from "./JavaScriptSDK/TelemetryHelpers";
 export { _InternalMessageId, LoggingSeverity } from './JavaScriptSDK.Enums/LoggingEnums';
 export { InstrumentProto, InstrumentProtos, InstrumentFunc, InstrumentFuncs } from "./JavaScriptSDK/InstrumentHooks";
-export { ICookieManager, ICookieManagerConfig } from './JavaScriptSDK.Interfaces/ICookieManager';
-export { CookieManager, gblCookieMgr } from './JavaScriptSDK/CookieManager';
+export { ICookieMgr, ICookieMgrConfig } from './JavaScriptSDK.Interfaces/ICookieMgr';
+export { CookieMgr, uaDisallowsSameSiteNone } from './JavaScriptSDK/CookieMgr';

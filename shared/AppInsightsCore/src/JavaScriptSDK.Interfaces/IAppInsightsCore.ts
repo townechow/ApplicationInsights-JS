@@ -9,7 +9,7 @@ import { INotificationListener } from "./INotificationListener";
 import { IDiagnosticLogger } from './IDiagnosticLogger';
 import { IProcessTelemetryContext } from './IProcessTelemetryContext';
 import { IPerfManagerProvider } from "./IPerfManager";
-import { ICookieManager } from "./ICookieManager";
+import { ICookieMgr } from "./ICookieMgr";
 
 "use strict";
 
@@ -50,7 +50,13 @@ export interface IAppInsightsCore extends IPerfManagerProvider {
     /**
      * Get the current cookie manager for this instance
      */
-    getCookieMgr(): ICookieManager;
+    getCookieMgr(): ICookieMgr;
+
+    /**
+     * Set the current cookie manager for this instance
+     * @param cookieMgr - The manager, if set to null/undefined will cause the default to be created
+     */
+    setCookieMgr(cookieMgr: ICookieMgr): void;
 
     /**
      * Adds a notification listener. The SDK calls methods on the listener when an appropriate notification is raised.

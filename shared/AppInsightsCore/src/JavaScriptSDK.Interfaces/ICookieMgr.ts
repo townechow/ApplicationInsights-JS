@@ -1,22 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-export interface ICookieManager {
+export interface ICookieMgr {
 
     /**
-     * Returns whether the usage of cookies are available
+     * Enable or Disable the usage of cookies
      */
-    isAvailable(): boolean;
-
-    /**
-     * Enable the usage of cookies
-     */
-    enable(): void;
-
-    /**
-     * Disable the usage of cookies
-     */
-    disable(): void;
+    setEnabled(value: boolean): void;
 
     /**
      * Can the system use cookies, if this returns false then all cookie setting and access functions will return nothing
@@ -48,8 +38,24 @@ export interface ICookieManager {
     del(name: string, path?: string): void;
 }
 
-export interface ICookieManagerConfig {
+export interface ICookieMgrConfig {
     enabled?: boolean;
 
     domain?: string;
+
+    /**
+     * Hook function to fetch the named cookie value.
+     * @param name - The name of the cookie
+     */
+    getCookie?: (name: string) => string;
+
+    /**
+     * Hook function to set the named cookie with the specified value.
+     */
+    setCookie?: (name: string, value: string) => void;
+
+    /**
+     * Hook function to delete the named cookie with the specified value
+     */
+    delCookie?: (name: string, cookieValue: string) => void;
 }

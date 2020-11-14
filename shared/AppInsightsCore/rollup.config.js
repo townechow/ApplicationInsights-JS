@@ -1,6 +1,7 @@
-import nodeResolve from "rollup-plugin-node-resolve";
-import {uglify} from "rollup-plugin-uglify";
-import replace from "rollup-plugin-replace";
+import nodeResolve from "@rollup/plugin-node-resolve";
+import { uglify } from "../../tools/rollup-plugin-uglify3-js/uglify3-js";
+import replace from "@rollup/plugin-replace";
+import commonjs from '@rollup/plugin-commonjs';
 import dynamicRemove from "@microsoft/dynamicproto-js/tools/rollup/node/removedynamic";
 import { es3Poly, es3Check, importCheck } from "@microsoft/applicationinsights-rollup-es3";
 

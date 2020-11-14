@@ -2,12 +2,13 @@
 // Licensed under the MIT License.
 "use strict";
 
+import { objCreateFn } from "@microsoft/applicationinsights-shims";
+import dynamicProto from '@microsoft/dynamicproto-js';
 import { IAppInsightsCore } from "../JavaScriptSDK.Interfaces/IAppInsightsCore"
 import { IConfiguration } from "../JavaScriptSDK.Interfaces/IConfiguration";
 import { IPlugin, ITelemetryPlugin } from "../JavaScriptSDK.Interfaces/ITelemetryPlugin";
 import { IChannelControls } from "../JavaScriptSDK.Interfaces/IChannelControls";
 import { ITelemetryItem } from "../JavaScriptSDK.Interfaces/ITelemetryItem";
-import { CoreUtils } from "./CoreUtils";
 import { INotificationManager } from '../JavaScriptSDK.Interfaces/INotificationManager';
 import { INotificationListener } from "../JavaScriptSDK.Interfaces/INotificationListener";
 import { IDiagnosticLogger } from "../JavaScriptSDK.Interfaces/IDiagnosticLogger";
@@ -16,17 +17,17 @@ import { IProcessTelemetryContext } from '../JavaScriptSDK.Interfaces/IProcessTe
 import { ProcessTelemetryContext } from './ProcessTelemetryContext';
 import { initializePlugins, sortPlugins } from './TelemetryHelpers';
 import { _InternalMessageId, LoggingSeverity } from "../JavaScriptSDK.Enums/LoggingEnums";
-import dynamicProto from '@microsoft/dynamicproto-js';
 import { IPerfManager } from "../JavaScriptSDK.Interfaces/IPerfManager";
 import { PerfManager } from "./PerfManager";
-import { ICookieManager } from "../JavaScriptSDK.Interfaces/ICookieManager";
-import { CookieManager } from "./CookieManager";
+import { ICookieMgr, ICookieMgrConfig } from "../JavaScriptSDK.Interfaces/ICookieMgr";
+import { CookieMgr } from "./CookieMgr";
+import { arrForEach, isNullOrUndefined, isUndefined, toISOString } from "./HelperFuncs";
 
 const validationError = "Extensions must provide callback to initialize";
 
-const _arrForEach = CoreUtils.arrForEach;
-const _isNullOrUndefined = CoreUtils.isNullOrUndefined;
 const strNotificationManager = "_notificationManager";
+const strIsCookieUseDisabled = "isCookieUseDisabled";
+const strDisableCookiesUsage = "disableCookiesUsage";
 
 export class BaseCore implements IAppInsightsCore {
     public static defaultConfig: IConfiguration;
@@ -42,12 +43,12 @@ export class BaseCore implements IAppInsightsCore {
         let _channelController: ChannelController;
         let _notificationManager: INotificationManager;
         let _perfManager: IPerfManager;
-        let _cookieManager: ICookieManager;
+        let _cookieManager: ICookieMgr;
     
         dynamicProto(BaseCore, this, (_self) => {
             _self._extensions = new Array<IPlugin>();
             _channelController = new ChannelController();
-            _self.logger = CoreUtils.objCreate({
+            _self.logger = objCreateFn({
                 throwInternal: (severity: LoggingSeverity, msgId: _InternalMessageId, msg: string, properties?: Object, isUserAct = false) => { },
                 warnToConsole: (message: string) => { },
                 resetInternalMessageCount: () => { }
@@ -62,7 +63,7 @@ export class BaseCore implements IAppInsightsCore {
                     throw Error("Core should not be initialized more than once");
                 }
         
-                if (!config || _isNullOrUndefined(config.instrumentationKey)) {
+                if (!config || isNullOrUndefined(config.instrumentationKey)) {
                     throw Error("Please provide instrumentation key");
                 }
         
@@ -72,11 +73,11 @@ export class BaseCore implements IAppInsightsCore {
                 _self[strNotificationManager] = notificationManager;
                
                 _self.config = config || {};
-        
-                config.extensions = _isNullOrUndefined(config.extensions) ? [] : config.extensions;
+
+                config.extensions = isNullOrUndefined(config.extensions) ? [] : config.extensions;
         
                 // add notification to the extensions in the config so other plugins can access it
-                let extConfig = config.extensionConfig = _isNullOrUndefined(config.extensionConfig) ? {} : config.extensionConfig;
+                let extConfig = config.extensionConfig = isNullOrUndefined(config.extensionConfig) ? {} : config.extensionConfig;
                 extConfig.NotificationManager = notificationManager;
 
                 if (logger) {
@@ -96,8 +97,8 @@ export class BaseCore implements IAppInsightsCore {
                 const extPriorities = {};
         
                 // Extension validation
-                _arrForEach(allExtensions, (ext: ITelemetryPlugin) => {
-                    if (_isNullOrUndefined(ext) || _isNullOrUndefined(ext.initialize)) {
+                arrForEach(allExtensions, (ext: ITelemetryPlugin) => {
+                    if (isNullOrUndefined(ext) || isNullOrUndefined(ext.initialize)) {
                         throw Error(validationError);
                     }
         
@@ -105,7 +106,7 @@ export class BaseCore implements IAppInsightsCore {
                     const identifier = ext.identifier;
         
                     if (ext && extPriority) {
-                        if (!_isNullOrUndefined(extPriorities[extPriority])) {
+                        if (!isNullOrUndefined(extPriorities[extPriority])) {
                             logger.warnToConsole("Two extensions have same priority #" + extPriority + " - " + extPriorities[extPriority] + ", " + identifier);
                         } else {
                             // set a value
@@ -160,10 +161,10 @@ export class BaseCore implements IAppInsightsCore {
 
                 if (!telemetryItem.time) {
                     // add default timestamp if not passed in
-                    telemetryItem.time = CoreUtils.toISOString(new Date());
+                    telemetryItem.time = toISOString(new Date());
                 }
 
-                if (_isNullOrUndefined(telemetryItem.ver)) {
+                if (isNullOrUndefined(telemetryItem.ver)) {
                     // CommonSchema 4.0
                     telemetryItem.ver = "4.0";
                 }
@@ -193,7 +194,7 @@ export class BaseCore implements IAppInsightsCore {
             _self.getNotifyMgr = (): INotificationManager => {
                 if (!_notificationManager) {
                     // Create Dummy notification manager
-                    _notificationManager = CoreUtils.objCreate({
+                    _notificationManager = objCreateFn({
                         addNotificationListener: (listener: INotificationListener) => { },
                         removeNotificationListener: (listener: INotificationListener) => { },
                         eventsSent: (events: ITelemetryItem[]) => { },
@@ -208,16 +209,16 @@ export class BaseCore implements IAppInsightsCore {
                 return _notificationManager;
             };
         
-            _self.getCookieMgr = (): ICookieManager => {
+            _self.getCookieMgr = (): ICookieMgr => {
                 if (!_cookieManager) {
-                    let config = _self.config || {};
-                    _cookieManager = new CookieManager(_self.logger, {
-                        enabled: !config.isCookieUseDisabled,
-                        domain: config.cookieDomain
-                    });
+                    _cookieManager = new CookieMgr(_createCookieMgrConfig(), _self.logger);
                 }
 
                 return _cookieManager;
+            };
+
+            _self.setCookieMgr = (cookieMgr: ICookieMgr) => {
+                _cookieManager = cookieMgr;
             };
 
             _self.getPerfMgr = (): IPerfManager => {
@@ -240,13 +241,32 @@ export class BaseCore implements IAppInsightsCore {
 
             _self.releaseQueue = () => {
                 if (_eventQueue.length > 0) {
-                    _arrForEach(_eventQueue, (event: ITelemetryItem) => {
+                    arrForEach(_eventQueue, (event: ITelemetryItem) => {
                         _self.getProcessTelContext().processNext(event);
                     });
 
                     _eventQueue = [];
                 }
             };
+
+            function _createCookieMgrConfig(): ICookieMgrConfig {
+                let config = _self.config || {};
+                let cookieMgrCfg = config.cookieMgrCfg || {};
+                cookieMgrCfg.domain = cookieMgrCfg.domain || config.cookieDomain;
+                if (isUndefined(cookieMgrCfg.enabled)) {
+                    let cookieEnabled = true;
+                    if (isUndefined(!config[strIsCookieUseDisabled])) {
+                        cookieEnabled = !config[strIsCookieUseDisabled];
+                    }
+                    if (!isUndefined(config[strDisableCookiesUsage])) {
+                        cookieEnabled = !config[strDisableCookiesUsage];
+                    }
+
+                    cookieMgrCfg.enabled = cookieEnabled;
+                }                
+
+                return cookieMgrCfg;
+            }
         });
     }
 
@@ -273,9 +293,20 @@ export class BaseCore implements IAppInsightsCore {
         return null;
     }
 
-    public getCookieMgr(): ICookieManager {
+    /**
+     * Get the current cookie manager for this instance
+     */
+    public getCookieMgr(): ICookieMgr {
         // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
         return null;
+    }
+
+    /**
+     * Set the current cookie manager for this instance
+     * @param cookieMgr - The manager, if set to null/undefined will cause the default to be created
+     */
+    public setCookieMgr(cookieMgr: ICookieMgr) {
+        // @DynamicProtoStub -- DO NOT add any code as this will be removed during packaging
     }
 
     public getPerfMgr(): IPerfManager {

@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { ISession, Util } from '@microsoft/applicationinsights-common';
-import { IDiagnosticLogger, _InternalMessageId, LoggingSeverity, CoreUtils, DiagnosticLogger, IAppInsightsCore, ICookieManager, gblCookieMgr } from '@microsoft/applicationinsights-core-js';
+import { IDiagnosticLogger, _InternalMessageId, LoggingSeverity, CoreUtils, DiagnosticLogger, IAppInsightsCore, ICookieMgr, CookieMgr } from '@microsoft/applicationinsights-core-js';
 import dynamicProto from "@microsoft/dynamicproto-js";
 
 const cookieNameConst = 'ai_session';
@@ -46,12 +46,8 @@ export class _SessionManager {
     constructor(config: ISessionConfig, core?: IAppInsightsCore) {
         let _storageNamePrefix: () => string;
         let _cookieUpdatedTimestamp: number;
-        let _logger: IDiagnosticLogger = (core || {} as IAppInsightsCore).logger;
-        let _cookieManager: ICookieManager = (core ? core.getCookieMgr() : null) || gblCookieMgr();
-
-        if(CoreUtils.isNullOrUndefined(_logger)) {
-            _logger = new DiagnosticLogger();
-        }
+        let _logger: IDiagnosticLogger = (core || {} as IAppInsightsCore).logger || new DiagnosticLogger();
+        let _cookieManager: ICookieMgr = (core ? core.getCookieMgr() : null) || new CookieMgr({}, _logger);
 
         dynamicProto(_SessionManager, this, (_self) => {
    

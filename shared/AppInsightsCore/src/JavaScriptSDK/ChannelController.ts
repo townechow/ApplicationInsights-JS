@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 "use strict";
 
+import dynamicProto from '@microsoft/dynamicproto-js';
 import { IAppInsightsCore } from "../JavaScriptSDK.Interfaces/IAppInsightsCore"
 import { IConfiguration } from "../JavaScriptSDK.Interfaces/IConfiguration";
 import { IChannelControls } from "../JavaScriptSDK.Interfaces/IChannelControls";
@@ -9,17 +10,14 @@ import { IPlugin, ITelemetryPlugin,  } from "../JavaScriptSDK.Interfaces/ITeleme
 import { ITelemetryPluginChain } from "../JavaScriptSDK.Interfaces/ITelemetryPluginChain";
 import { ITelemetryItem } from "../JavaScriptSDK.Interfaces/ITelemetryItem";
 import { IProcessTelemetryContext } from "../JavaScriptSDK.Interfaces/IProcessTelemetryContext";
-import { CoreUtils } from "./CoreUtils";
 import { _InternalLogMessage } from "./DiagnosticLogger";
 import { BaseTelemetryPlugin } from './BaseTelemetryPlugin';
 import { ProcessTelemetryContext } from './ProcessTelemetryContext';
 import { initializePlugins } from './TelemetryHelpers';
-import dynamicProto from '@microsoft/dynamicproto-js';
+import { arrForEach, objDefineAccessors } from "./HelperFuncs";
 
 const ChannelControllerPriority = 500;
 const ChannelValidationMessage = "Channel has invalid priority";
-
-let _objDefineAccessors = CoreUtils.objDefineAccessors;
 
 export class ChannelController extends BaseTelemetryPlugin {
 
@@ -30,7 +28,6 @@ export class ChannelController extends BaseTelemetryPlugin {
 
     constructor() {
         super();
-        let _arrForEach = CoreUtils.arrForEach;
         let _channelQueue: IChannelControls[][];
 
         dynamicProto(ChannelController, this, (_self, _base) => {
@@ -40,7 +37,7 @@ export class ChannelController extends BaseTelemetryPlugin {
 
             _self.processTelemetry = (item: ITelemetryItem, itemCtx: IProcessTelemetryContext) => {
                 if (_channelQueue) {
-                    _arrForEach(_channelQueue, queues => {
+                    arrForEach(_channelQueue, queues => {
                         // pass on to first item in queue
                         if (queues.length > 0) {
                             // Copying the item context as we could have mutiple chains that are executing asynchronously
@@ -64,19 +61,15 @@ export class ChannelController extends BaseTelemetryPlugin {
         
                 _base.initialize(config, core, extensions);
         
-                if ((config as any).isCookieUseDisabled) {
-                    CoreUtils.disableCookies();
-                }
-                
                 _createChannelQueues((config||{}).channels, extensions);
         
                 // Initialize the Queues
-                _arrForEach(_channelQueue, queue => initializePlugins(new ProcessTelemetryContext(queue, config, core), extensions));
+                arrForEach(_channelQueue, queue => initializePlugins(new ProcessTelemetryContext(queue, config, core), extensions));
             }
         });
 
         function _checkQueuePriority(queue:IChannelControls[]) {
-            _arrForEach(queue, queueItem => {
+            arrForEach(queue, queueItem => {
                 if (queueItem.priority < ChannelControllerPriority) {
                     throw Error(ChannelValidationMessage + queueItem.identifier);
                 }
@@ -99,13 +92,13 @@ export class ChannelController extends BaseTelemetryPlugin {
         
             if (channels) {
                 // Add and sort the configuration channel queues
-                _arrForEach(channels, queue => _addChannelQueue(queue));
+                arrForEach(channels, queue => _addChannelQueue(queue));
             }
         
             if (extensions) {
                 // Create a new channel queue for any extensions with a priority > the ChannelControllerPriority
                 let extensionQueue:IChannelControls[] = [];
-                _arrForEach(extensions as IChannelControls[], plugin => {
+                arrForEach(extensions as IChannelControls[], plugin => {
                     if (plugin.priority > ChannelControllerPriority) {
                         extensionQueue.push(plugin);
                     }
@@ -135,7 +128,7 @@ export class ChannelController extends BaseTelemetryPlugin {
     // tslint:disable-next-line
     private static _staticInit = (() => {
         // Dynamically create get/set property accessors
-        _objDefineAccessors(ChannelController.prototype, "ChannelControls", ChannelController.prototype.getChannelControls);
-        _objDefineAccessors(ChannelController.prototype, "channelQueue", ChannelController.prototype.getChannelControls);
+        objDefineAccessors(ChannelController.prototype, "ChannelControls", ChannelController.prototype.getChannelControls);
+        objDefineAccessors(ChannelController.prototype, "channelQueue", ChannelController.prototype.getChannelControls);
     })();
 }

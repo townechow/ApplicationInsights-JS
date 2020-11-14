@@ -3,25 +3,18 @@
 
 import { StorageType } from "./Enums";
 import {
-    CoreUtils, EventHelper, _InternalMessageId, LoggingSeverity, IDiagnosticLogger, IPlugin, getCrypto, getMsCrypto,
-    getGlobal, getGlobalInst, getWindow, getDocument, getNavigator, getPerformance, getLocation, hasJSON, getJSON,
-    strPrototype, getExceptionName as coreGetExceptionName, dumpObj, gblCookieMgr, uaDisallowsSameSiteNone, objForEachKey
+    EventHelper, _InternalMessageId, LoggingSeverity, IDiagnosticLogger, IPlugin,
+    getGlobal, getGlobalInst, getWindow, getDocument, getNavigator, getPerformance, 
+    getExceptionName as coreGetExceptionName, dumpObj, CookieMgr, uaDisallowsSameSiteNone, objForEachKey,
+    isString, isFunction, isNullOrUndefined, CoreUtils
 } from "@microsoft/applicationinsights-core-js";
 import { RequestHeaders } from "./RequestResponseHeaders";
 import { DataSanitizer } from "./Telemetry/Common/DataSanitizer";
 import { ICorrelationConfig } from "./Interfaces/ICorrelationConfig";
 
 let _navigator = getNavigator();
-let _isString = CoreUtils.isString;
-
-function _endsWith(value: string, search: string) {
-    let len = value.length;
-    let start = len - search.length;
-    return value.substring(start >= 0 ? start : 0, len) === search;
-}
 
 export class Util {
-    private static document: any = getDocument() || {};
     private static _canUseLocalStorage: boolean = undefined;
     private static _canUseSessionStorage: boolean = undefined;
     // listing only non-geo specific locations
@@ -35,7 +28,7 @@ export class Util {
     public static createDomEvent(eventName: string): Event {
         let event: Event = null;
 
-        if (CoreUtils.isFunction(Event)) { // Use Event constructor when available
+        if (isFunction(Event)) { // Use Event constructor when available
             event = new Event(eventName);
         } else { // Event has no constructor in IE
             let doc = getDocument();
@@ -79,7 +72,7 @@ export class Util {
         let fail: boolean;
         let uid: Date;
         try {
-            if (CoreUtils.isNullOrUndefined(getGlobal())) {
+            if (isNullOrUndefined(getGlobal())) {
                 return null;
             }
             uid = new Date;
@@ -312,28 +305,28 @@ export class Util {
         return false;
     }
 
-    /*
-     * Force the SDK not to store and read any data from cookies
+    /**
+     * @deprecated - Use the core.getCookieMgr().disable()
+     * Force the SDK not to store and read any data from cookies.
      */
-    public static disableCookies() {
-        // Now disables cookies but doesn't reset whether cookie support is available
-        gblCookieMgr().disable();
-    }
+    public static disableCookies = CoreUtils.disableCookies;
 
-    /*
-     * Helper method to tell if document.cookie object is available and whether it can be used
+    /**
+     * @deprecated - Use the core.getCookieMgr().isEnabled()
+     * Helper method to tell if document.cookie object is available and whether it can be used.
      */
     public static canUseCookies(logger: IDiagnosticLogger): any {
-        return gblCookieMgr(logger).isEnabled();
+        return CookieMgr._gbl(logger).isEnabled();
     }
 
     public static disallowsSameSiteNone = uaDisallowsSameSiteNone;
 
     /**
+     * @deprecated - Use the core.getCookieMgr().set()
      * helper method to set userId and sessionId cookie
      */
     public static setCookie(logger: IDiagnosticLogger, name: string, value: string, domain?: string) {
-        gblCookieMgr(logger).set(name, value, domain);
+        CookieMgr._gbl(logger).set(name, value, domain);
     }
 
     public static stringToBoolOrDefault(str: any, defaultValue = false): boolean {
@@ -345,18 +338,20 @@ export class Util {
     }
 
     /**
+     * @deprecated - Use the core.getCookieMgr().get()
      * helper method to access userId and sessionId cookie
      */
     public static getCookie(logger: IDiagnosticLogger, name: string) {
-        return gblCookieMgr(logger).get(name);
+        return CookieMgr._gbl(logger).get(name);
     }
 
     /**
+     * @deprecated - Use the core.getCookieMgr().del()
      * Deletes a cookie by setting it's expiration time in the past.
      * @param name - The name of the cookie to delete.
      */
     public static deleteCookie(logger: IDiagnosticLogger, name: string) {
-        return gblCookieMgr(logger).del(name);
+        return CookieMgr._gbl(logger).del(name);
     }
 
     /**
@@ -445,7 +440,7 @@ export class Util {
      * happens in a script from other domain (cross origin, CORS).
      */
     public static isCrossOriginError(message: string|Event, url: string, lineNumber: number, columnNumber: number, error: Error): boolean {
-        return !error && _isString(message) && (message === "Script error." || message === "Script error");
+        return !error && isString(message) && (message === "Script error." || message === "Script error");
     }
 
     /**
@@ -556,7 +551,7 @@ export class UrlHelper {
         let fullHost = UrlHelper.parseFullHost(url, inclPort);
         if (fullHost) {
             const match = fullHost.match(/(www[0-9]?\.)?(.[^/:]+)(\:[\d]+)?/i);
-            if (match != null && match.length > 3 && _isString(match[2]) && match[2].length > 0) {
+            if (match != null && match.length > 3 && isString(match[2]) && match[2].length > 0) {
                 return match[2] + (match[3] || "");
             }
         }
@@ -571,7 +566,7 @@ export class UrlHelper {
         let result = null;
         if (url) {
             const match = url.match(/(\w*):\/\/(.[^/:]+)(\:[\d]+)?/i);
-            if (match != null && match.length > 2 && _isString(match[2]) && match[2].length > 0) {
+            if (match != null && match.length > 2 && isString(match[2]) && match[2].length > 0) {
                 result = match[2] || "";
                 if (inclPort && match.length > 2) {
                     const protocol = (match[1] || "").toLowerCase();

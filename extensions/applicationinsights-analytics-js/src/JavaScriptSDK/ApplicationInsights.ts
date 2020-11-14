@@ -13,9 +13,10 @@ import {
 
 import {
     IPlugin, IConfiguration, IAppInsightsCore,
-    BaseTelemetryPlugin, CoreUtils, ITelemetryItem, IProcessTelemetryContext, ITelemetryPluginChain,
+    BaseTelemetryPlugin, ITelemetryItem, IProcessTelemetryContext, ITelemetryPluginChain,
     IDiagnosticLogger, LoggingSeverity, _InternalMessageId, ICustomProperties,
-    getWindow, getDocument, getHistory, getLocation, doPerf, objForEachKey
+    getWindow, getDocument, getHistory, getLocation, doPerf, objForEachKey, 
+    isString, isFunction, isNullOrUndefined, arrForEach
 } from "@microsoft/applicationinsights-core-js";
 import { PageViewManager, IAppInsightsInternal } from "./Telemetry/PageViewManager";
 import { PageVisitTimeManager } from "./Telemetry/PageVisitTimeManager";
@@ -39,9 +40,9 @@ function _dispatchEvent(target:EventTarget, evnt: Event) {
 }
 
 function _formatMessage(message: any) {
-    if (message && !CoreUtils.isString(message)) {
+    if (message && !isString(message)) {
         // tslint:disable-next-line: prefer-conditional-expression
-        if (CoreUtils.isFunction(message.toString)) {
+        if (isFunction(message.toString)) {
             message = message.toString();
         } else {
             message = JSON.stringify(message);
@@ -93,7 +94,6 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
 
     constructor() {
         super();
-        let _globalconfig: IConfiguration;
         let _eventTracking: Timing;
         let _pageTracking: Timing;
         let _properties: properties.PropertiesPlugin;
@@ -485,7 +485,7 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
                     return;
                 }
         
-                if (CoreUtils.isNullOrUndefined(core)) {
+                if (isNullOrUndefined(core)) {
                     throw Error("Error initializing");
                 }
         
@@ -493,11 +493,6 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
                 _self.setInitialized(false); // resetting the initialized state, just in case the following fails
                 let ctx = _self._getTelCtx();
                 let identifier = _self.identifier;
-        
-                _globalconfig = {
-                    instrumentationKey: config.instrumentationKey,
-                    endpointUrl: config.endpointUrl || "https://dc.services.visualstudio.com/v2/track"
-                };
         
                 _self.config = ctx.getExtCfg<IConfig>(identifier);
         
@@ -507,20 +502,10 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
                     objForEachKey(defaults, (field, value) => {
                         // for each unspecified field, set the default value
                         _self.config[field] = ctx.getConfig(identifier, field, value);
+                        if (_self.config[field] === undefined) {
+                            _self.config[field] = value;
+                        }
                     });
-        
-                    if (_globalconfig) {
-                        objForEachKey(defaults, (field, value) => {
-                            if (_globalconfig[field] === undefined) {
-                                _globalconfig[field] = value;
-                            }
-                        });
-                    }
-                }
-        
-                // Todo: move this out of static state
-                if (_self.config.isCookieUseDisabled) {
-                    core.getCookieMgr().disable();
                 }
         
                 // Todo: move this out of static state
@@ -564,7 +549,7 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
                 _pageTracking.action = (name, url, duration, properties, measurements) => {
         
                     // duration must be a custom property in order for the collector to extract it
-                    if (CoreUtils.isNullOrUndefined(properties)) {
+                    if (isNullOrUndefined(properties)) {
                         properties = {};
                     }
                     properties[durationProperty] = duration.toString();
@@ -633,12 +618,12 @@ export class ApplicationInsights extends BaseTelemetryPlugin implements IAppInsi
                  * Create a custom "locationchange" event which is triggered each time the history object is changed
                  */
                 if (_self.config.enableAutoRouteTracking === true
-                    && _history && CoreUtils.isFunction(_history.pushState) && CoreUtils.isFunction(_history.replaceState)
+                    && _history && isFunction(_history.pushState) && isFunction(_history.replaceState)
                     && _window
                     && typeof Event !== "undefined") {
                     const _self = this;
                     // Find the properties plugin
-                    CoreUtils.arrForEach(extensions, extension => {
+                    arrForEach(extensions, extension => {
                         if (extension.identifier === PropertiesPluginIdentifier) {
                             _properties = extension as properties.PropertiesPlugin;
                         }

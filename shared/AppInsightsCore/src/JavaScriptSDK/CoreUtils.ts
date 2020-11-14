@@ -1,21 +1,19 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 "use strict";
-import { objCreateFn, strShimObject, strShimUndefined, strShimFunction, strShimPrototype } from "@microsoft/applicationinsights-shims";
-import { gblCookieMgr } from "./CookieManager";
-import { getWindow, getDocument, getCrypto, getPerformance, getMsCrypto, getNavigator, hasJSON, getJSON }  from './EnvUtils';
+import { objCreateFn, strShimUndefined } from "@microsoft/applicationinsights-shims";
+import { getWindow, getDocument, getCrypto, getPerformance, getMsCrypto, getNavigator, isIE }  from "./EnvUtils";
+import { _ckIsEnabled, _ckEnable, _ckDisable }  from "./CookieMgr";
+import { 
+    arrForEach, arrIndexOf, arrMap, arrReduce, attachEvent, dateNow, detachEvent, hasOwnProperty, 
+    isArray, isBoolean, isDate, isError, isFunction, isNullOrUndefined, isNumber, isObject, isString, isTypeof, 
+    isUndefined, objDefineAccessors, objKeys, strEndsWith, strTrim, toISOString
+} from "./HelperFuncs";
 
 // Added to help with minfication
 export const Undefined = strShimUndefined;
-const strOnPrefix = "on";
-const strAttachEvent = "attachEvent";
-const strAddEventHelper = "addEventListener";
-const strDetachEvent = "detachEvent";
-const strRemoveEventListener = "removeEventListener";
 const UInt32Mask = 0x100000000;
 const MaxUInt32 = 0xffffffff;
-
-let _isTrident: boolean = null;
 
 // MWC based Random generator (for IE)
 let _mwcSeeded = false;
@@ -40,246 +38,93 @@ function _autoSeedMwc() {
     _mwcSeed((Math.random() * UInt32Mask) ^ new Date().getTime());
 }
 
-function _isTypeof(value: any, theType: string): boolean {
-    return typeof value === theType;
-};
-
-function _isUndefined(value: any): boolean {
-    return _isTypeof(value, strShimUndefined) || value === undefined;
-};
-
-function _isNullOrUndefined(value: any): boolean {
-    return (_isUndefined(value) || value === null);
-}
-
-function _hasOwnProperty(obj: any, prop: string): boolean {
-    return obj && Object[strShimPrototype].hasOwnProperty.call(obj, prop);
-};
-
-function _isObject(value: any): boolean {
-    return _isTypeof(value, strShimObject);
-};
-
-function _isFunction(value: any): value is Function {
-    return _isTypeof(value, strShimFunction);
-};
-
 /**
- * Binds the specified function to an event, so that the function gets called whenever the event fires on the object
- * @param obj Object to add the event too.
- * @param eventNameWithoutOn String that specifies any of the standard DHTML Events without "on" prefix
- * @param handlerRef Pointer that specifies the function to call when event fires
- * @param useCapture [Optional] Defaults to false
- * @returns True if the function was bound successfully to the event, otherwise false
+ * Trys to add an event handler for the specified event to the window, body and document
+ * @param eventName {string} - The name of the event
+ * @param callback {any} - The callback function that needs to be executed for the given event
+ * @return {boolean} - true if the handler was successfully added
  */
-function _attachEvent(obj: any, eventNameWithoutOn: string, handlerRef: any, useCapture: boolean = false) {
+export function addEventHandler(eventName: string, callback: any): boolean {
     let result = false;
-    if (!_isNullOrUndefined(obj)) {
-        try {
-            if (!_isNullOrUndefined(obj[strAddEventHelper])) {
-                // all browsers except IE before version 9
-                obj[strAddEventHelper](eventNameWithoutOn, handlerRef, useCapture);
-                result = true;
-            } else if (!_isNullOrUndefined(obj[strAttachEvent])) {
-                // IE before version 9                    
-                obj[strAttachEvent](strOnPrefix + eventNameWithoutOn, handlerRef);
-                result = true;
-            }
-        } catch (e) {
-            // Just Ignore any error so that we don't break any execution path
-        }
+    let w = getWindow();
+    if (w) {
+        result = attachEvent(w, eventName, callback);
+        result = attachEvent(w["body"], eventName, callback) || result;
+    }
+
+    let doc = getDocument();
+    if (doc) {
+        result = EventHelper.Attach(doc, eventName, callback) || result;
     }
 
     return result;
 }
 
-/**
- * Removes an event handler for the specified event
- * @param Object to remove the event from
- * @param eventNameWithoutOn {string} - The name of the event
- * @param handlerRef {any} - The callback function that needs to be executed for the given event
- * @param useCapture [Optional] Defaults to false
- */
-function _detachEvent(obj: any, eventNameWithoutOn: string, handlerRef: any, useCapture: boolean = false) {
-    if (!_isNullOrUndefined(obj)) {
-        try {
-            if (!_isNullOrUndefined(obj[strRemoveEventListener])) {
-                obj[strRemoveEventListener](eventNameWithoutOn, handlerRef, useCapture);
-            } else if (!_isNullOrUndefined(obj[strDetachEvent])) {
-                obj[strDetachEvent](strOnPrefix + eventNameWithoutOn, handlerRef);
-            }
-        } catch (e) {
-            // Just Ignore any error so that we don't break any execution path
-        }
-    }
-}
-
-/**
- * Validates that the string name conforms to the JS IdentifierName specification and if not
- * normalizes the name so that it would. This method does not identify or change any keywords
- * meaning that if you pass in a known keyword the same value will be returned.
- * This is a simplified version
- * @param name The name to validate
- */
-export function normalizeJsName(name: string): string {
-    let value = name;
-    let match = /([^\w\d_$])/g;
-    if (match.test(name)) {
-        value = name.replace(match, "_");
-    }
-
-    return value;
-}
-
-/**
- * This is a helper function for the equivalent of arForEach(objKeys(target), callbackFn), this is a 
- * performance optimization to avoid the creation of a new array for large objects
- * @param target The target object to find and process the keys
- * @param callbackfn The function to call with the details
- */
-export function objForEachKey(target: any, callbackfn: (name: string, value: any) => void) {
-    if (target && _isObject(target)) {
-        for (let prop in target) {
-            if (_hasOwnProperty(target, prop)) {
-                callbackfn.call(target, prop, target[prop]);
-            }
-        }
-    }
-}
-
-/**
- * The strEndsWith() method determines whether a string ends with the characters of a specified string, returning true or false as appropriate.
- * @param value - The value to check whether it ends with the search value.
- * @param search - The characters to be searched for at the end of the value.
- * @returns true if the given search value is found at the end of the string, otherwise false.
- */
-export function strEndsWith(value: string, search: string) {
-    if (value && search) {
-        let len = value.length;
-        let start = len - search.length;
-        return value.substring(start >= 0 ? start : 0, len) === search;
-    }
-
-    return false;
-}    
-
 export class CoreUtils {
     public static _canUseCookies: boolean;
 
-    public static isTypeof: (value: any, theType: string) => boolean = _isTypeof;
+    public static isTypeof: (value: any, theType: string) => boolean = isTypeof;
 
-    public static isUndefined: (value: any) => boolean = _isUndefined;
+    public static isUndefined: (value: any) => boolean = isUndefined;
 
-    public static isNullOrUndefined: (value: any) => boolean = _isNullOrUndefined;
+    public static isNullOrUndefined: (value: any) => boolean = isNullOrUndefined;
 
-    public static hasOwnProperty: (obj: any, prop: string) => boolean = _hasOwnProperty;
-
-    /**
-     * Checks if the passed of value is a function.
-     * @param {any} value - Value to be checked.
-     * @return {boolean} True if the value is a boolean, false otherwise.
-     */
-    public static isFunction: (value: any) => value is Function = _isFunction;
+    public static hasOwnProperty: (obj: any, prop: string) => boolean = hasOwnProperty;
 
     /**
      * Checks if the passed of value is a function.
      * @param {any} value - Value to be checked.
      * @return {boolean} True if the value is a boolean, false otherwise.
      */
-    public static isObject: (value: any) => boolean = _isObject;
+    public static isFunction: (value: any) => value is Function = isFunction;
+
+    /**
+     * Checks if the passed of value is a function.
+     * @param {any} value - Value to be checked.
+     * @return {boolean} True if the value is a boolean, false otherwise.
+     */
+    public static isObject: (value: any) => boolean = isObject;
 
     /**
      * Check if an object is of type Date
      */
-    public static isDate(obj: any): obj is Date {
-        return Object[strShimPrototype].toString.call(obj) === "[object Date]";
-    }
+    public static isDate: (obj: any) => obj is Date = isDate;
 
     /**
      * Check if an object is of type Array
      */
-    public static isArray(obj: any): boolean {
-        return Object[strShimPrototype].toString.call(obj) === "[object Array]";
-    }
+    public static isArray: (obj: any) => boolean = isArray;
 
     /**
      * Check if an object is of type Error
      */
-    public static isError(obj: any): boolean {
-        return Object[strShimPrototype].toString.call(obj) === "[object Error]";
-    }
+    public static isError: (obj: any) => boolean = isError;
 
     /**
      * Checks if the type of value is a string.
      * @param {any} value - Value to be checked.
      * @return {boolean} True if the value is a string, false otherwise.
      */
-    public static isString(value: any): value is string {
-        return _isTypeof(value, "string");
-    }
+    public static isString: (value: any) => value is string = isString;
 
     /**
      * Checks if the type of value is a number.
      * @param {any} value - Value to be checked.
      * @return {boolean} True if the value is a number, false otherwise.
      */
-    public static isNumber(value: any): value is number {
-        return _isTypeof(value, "number");
-    }
+    public static isNumber: (value: any) => value is number = isNumber;
 
     /**
      * Checks if the type of value is a boolean.
      * @param {any} value - Value to be checked.
      * @return {boolean} True if the value is a boolean, false otherwise.
      */
-    public static isBoolean(value: any): value is boolean {
-        return _isTypeof(value, "boolean");
-    }
-
-    /**
-     * Creates a new GUID.
-     * @return {string} A GUID.
-     */
-
-    public static disableCookies() {
-        gblCookieMgr().disable();
-    }
-
-    public static newGuid(): string {
-        function randomHexDigit() {
-            return CoreUtils.randomValue(15); // Get a random value from 0..15
-        }
-
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(GuidRegex, (c) => {
-            const r = (randomHexDigit() | 0), v = (c === 'x' ? r : r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
+    public static isBoolean: (value: any) => value is boolean = isBoolean;
 
     /**
      * Convert a date to I.S.O. format in IE8
      */
-    public static toISOString(date: Date) {
-        if (CoreUtils.isDate(date)) {
-            const pad = (num: number) => {
-                let r = String(num);
-                if (r.length === 1) {
-                    r = "0" + r;
-                }
-
-                return r;
-            }
-
-            return date.getUTCFullYear()
-                + "-" + pad(date.getUTCMonth() + 1)
-                + "-" + pad(date.getUTCDate())
-                + "T" + pad(date.getUTCHours())
-                + ":" + pad(date.getUTCMinutes())
-                + ":" + pad(date.getUTCSeconds())
-                + "." + String((date.getUTCMilliseconds() / 1000).toFixed(3)).slice(2, 5)
-                + "Z";
-        }
-    }
+    public static toISOString: (date: Date) => string = toISOString;
 
     /**
      * Performs the specified action for each element in an array. This helper exists to avoid adding a polyfil for older browsers
@@ -289,16 +134,7 @@ export class CoreUtils {
      * @param callbackfn  A function that accepts up to three arguments. forEach calls the callbackfn function one time for each element in the array. It can return -1 to break out of the loop
      * @param thisArg  [Optional] An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
      */
-    public static arrForEach<T>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => void|number, thisArg?: any): void {
-        let len = arr.length;
-        for (let idx = 0; idx < len; idx++) {
-            if (idx in arr) {
-                if (callbackfn.call(thisArg || arr, arr[idx], idx, arr) === -1) {
-                    break;
-                }
-            }
-        }
-    }
+    public static arrForEach: <T>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => void|number, thisArg?: any) => void  = arrForEach;
 
     /**
      * Returns the index of the first occurrence of a value in an array. This helper exists to avoid adding a polyfil for older browsers
@@ -308,17 +144,7 @@ export class CoreUtils {
      * @param searchElement The value to locate in the array.
      * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0.
      */
-    public static arrIndexOf<T>(arr: T[], searchElement: T, fromIndex?: number): number {
-        let len = arr.length;
-        let from = fromIndex || 0;
-        for (let lp = Math.max(from >= 0 ? from : len - Math.abs(from), 0); lp < len; lp++) {
-            if (lp in arr && arr[lp] === searchElement) {
-                return lp;
-            }
-        }
-
-        return -1;
-    }
+    public static arrIndexOf: <T>(arr: T[], searchElement: T, fromIndex?: number) => number = arrIndexOf;
 
     /**
      * Calls a defined callback function on each element of an array, and returns an array that contains the results. This helper exists 
@@ -328,19 +154,7 @@ export class CoreUtils {
      * @param callbackfn A function that accepts up to three arguments. The map method calls the callbackfn function one time for each element in the array.
      * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
      */
-    public static arrMap<T, R>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => R, thisArg?: any): R[] {
-        let len = arr.length;
-        let _this = thisArg || arr;
-        let results = new Array(len);
-
-        for (let lp = 0; lp < len; lp++) {
-            if (lp in arr) {
-                results[lp] = callbackfn.call(_this, arr[lp], arr);
-            }
-        }
-
-        return results;
-    }
+    public static arrMap: <T, R>(arr: T[], callbackfn: (value: T, index?: number, array?: T[]) => R, thisArg?: any) => R[] = arrMap;
 
     /**
      * Calls the specified callback function for all the elements in an array. The return value of the callback function is the accumulated result, and is
@@ -350,42 +164,12 @@ export class CoreUtils {
      * @param callbackfn A function that accepts up to four arguments. The reduce method calls the callbackfn function one time for each element in the array.
      * @param initialValue If initialValue is specified, it is used as the initial value to start the accumulation. The first call to the callbackfn function provides this value as an argument instead of an array value.
      */
-    public static arrReduce<T, R>(arr: T[], callbackfn: (previousValue: T | R, currentValue?: T, currentIndex?: number, array?: T[]) => R, initialValue?: R): R {
-        let len = arr.length;
-        let lp = 0;
-        let value;
-
-        // Specifically checking the number of passed arguments as the value could be anything
-        if (arguments.length >= 3) {
-            value = arguments[2];
-        } else {
-            while (lp < len && !(lp in arr)) {
-                lp++;
-            }
-
-            value = arr[lp++];
-        }
-
-        while (lp < len) {
-            if (lp in arr) {
-                value = callbackfn(value, arr[lp], lp, arr);
-            }
-            lp++;
-        }
-
-        return value;
-    }
+    public static arrReduce: <T, R>(arr: T[], callbackfn: (previousValue: T | R, currentValue?: T, currentIndex?: number, array?: T[]) => R, initialValue?: R) => R = arrReduce;
 
     /**
      * helper method to trim strings (IE8 does not implement String.prototype.trim)
      */
-    public static strTrim(str: any): string {
-        if (!CoreUtils.isString(str)) {
-            return str;
-        }
-
-        return str.replace(/^\s+|\s+$/g, "");
-    }
+    public static strTrim: (str: any) => string = strTrim;
 
     /**
      * Creates an object that has the specified prototype, and that optionally contains specified properties. This helper exists to avoid adding a polyfil
@@ -402,42 +186,7 @@ export class CoreUtils {
      * Note: For consistency this will not use the Object.keys implementation if it exists as this would cause a testing requirement to test with and without the implementations
      * @param obj Object that contains the properties and methods. This can be an object that you created or an existing Document Object Model (DOM) object.
      */
-    public static objKeys(obj: {}): string[] {
-        var hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString');
-
-        if (!_isFunction(obj) && (!_isObject(obj) || obj === null)) {
-            throw new TypeError('objKeys called on non-object');
-        }
-
-        let result: string[] = [];
-
-        for (let prop in obj) {
-            if (_hasOwnProperty(obj, prop)) {
-                result.push(prop);
-            }
-        }
-
-        if (hasDontEnumBug) {
-            let dontEnums = [
-                'toString',
-                'toLocaleString',
-                'valueOf',
-                'hasOwnProperty',
-                'isPrototypeOf',
-                'propertyIsEnumerable',
-                'constructor'
-            ];
-            let dontEnumsLength = dontEnums.length;
-
-            for (let lp = 0; lp < dontEnumsLength; lp++) {
-                if (_hasOwnProperty(obj, dontEnums[lp])) {
-                    result.push(dontEnums[lp]);
-                }
-            }
-        }
-
-        return result;
-    }
+    public static objKeys: (obj: {}) => string[] = objKeys;
 
     /**
      * Try to define get/set object property accessors for the target object/prototype, this will provide compatibility with
@@ -449,32 +198,7 @@ export class CoreUtils {
      * @param setProp The setter function to wire against the setter.
      * @returns True if it was able to create the accessors otherwise false
      */
-    public static objDefineAccessors<T>(target: any, prop: string, getProp?: () => T, setProp?: (v: T) => void): boolean {
-        let defineProp = Object["defineProperty"];
-        if (defineProp) {
-            try {
-                let descriptor: PropertyDescriptor = {
-                    enumerable: true,
-                    configurable: true
-                }
-
-                if (getProp) {
-                    descriptor.get = getProp;
-                }
-                if (setProp) {
-                    descriptor.set = setProp;
-                }
-
-                defineProp(target, prop, descriptor);
-                return true;
-            } catch (e) {
-                // IE8 Defines a defineProperty on Object but it's only supported for DOM elements so it will throw
-                // We will just ignore this here.
-            }
-        }
-
-        return false;
-    }
+    public static objDefineAccessors: <T>(target: any, prop: string, getProp?: () => T, setProp?: (v: T) => void) => boolean = objDefineAccessors;
 
     /**
      * Trys to add an event handler for the specified event to the window, body and document
@@ -482,33 +206,36 @@ export class CoreUtils {
      * @param callback {any} - The callback function that needs to be executed for the given event
      * @return {boolean} - true if the handler was successfully added
      */
-    public static addEventHandler(eventName: string, callback: any): boolean {
-        let result = false;
-        let w = getWindow();
-        if (w) {
-            result = _attachEvent(w, eventName, callback);
-            result = _attachEvent(w["body"], eventName, callback) || result;
-        }
-
-        let doc = getDocument();
-        if (doc) {
-            result = EventHelper.Attach(doc, eventName, callback) || result;
-        }
-
-        return result;
-    }
+    public static addEventHandler: (eventName: string, callback: any) => boolean = addEventHandler;
 
     /**
      * Return the current time via the Date now() function (if available) and falls back to (new Date()).getTime() if now() is unavailable (IE8 or less)
      * https://caniuse.com/#search=Date.now
      */
-    public static dateNow() {
-        let dt = Date;
-        if (dt.now) {
-            return dt.now();
+    public static dateNow = dateNow;
+
+    /**
+     * Identifies whether the current environment appears to be IE
+     */
+    public static isIE = isIE;
+
+    /**
+     * @deprecated - Use the core.getCookieMgr().disable()
+     * Force the SDK not to store and read any data from cookies.
+     */
+    public static disableCookies() {
+        _ckDisable();
+    }
+
+    public static newGuid(): string {
+        function randomHexDigit() {
+            return CoreUtils.randomValue(15); // Get a random value from 0..15
         }
 
-        return new dt().getTime();
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(GuidRegex, (c) => {
+            const r = (randomHexDigit() | 0), v = (c === 'x' ? r : r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     /**
@@ -521,7 +248,7 @@ export class CoreUtils {
             return perf.now();
         }
 
-        return CoreUtils.dateNow();
+        return dateNow();
     }
 
     /**
@@ -550,19 +277,6 @@ export class CoreUtils {
 
         return result;
     }
-
-    /**
-     * Identifies whether the current environment appears to be IE
-     */
-    public static isIE() {
-        if (_isTrident === null) {
-            let navigator = getNavigator() || ({} as Navigator);
-            let userAgent = (navigator.userAgent || "").toLowerCase();
-            _isTrident = (userAgent.indexOf("msie") !== -1 || userAgent.indexOf("trident/") !== -1);
-        }
-    
-        return _isTrident;
-    }    
 
     /**
      * Generate a random value between 0 and maxValue, max value should be limited to a 32-bit maximum.
@@ -674,16 +388,17 @@ export class CoreUtils {
      */
     // tslint:disable-next-line
     private static _staticInit = (() => {
-        // Dynamically create get/set property accessors
+        // Dynamically create get/set property accessors for backward compatibility for enabling / disabling cookies
+        // this WILL NOT work for ES3 browsers (< IE8)
         CoreUtils.objDefineAccessors<boolean>(CoreUtils, "_canUseCookies", 
             () => {
-                return gblCookieMgr().isEnabled();
+                return _ckIsEnabled();
             }, 
             (value) => {
                 if (value) {
-                    gblCookieMgr().enable();
+                    _ckEnable();
                 } else {
-                    gblCookieMgr().disable();
+                    _ckDisable();
                 }
             });
     })();
@@ -699,7 +414,7 @@ export class EventHelper {
      * @param handlerRef Pointer that specifies the function to call when event fires
      * @returns True if the function was bound successfully to the event, otherwise false
      */
-    public static Attach: (obj: any, eventNameWithoutOn: string, handlerRef: any) => boolean = _attachEvent;
+    public static Attach: (obj: any, eventNameWithoutOn: string, handlerRef: any) => boolean = attachEvent;
 
     /**
      * Binds the specified function to an event, so that the function gets called whenever the event fires on the object
@@ -709,7 +424,7 @@ export class EventHelper {
      * @param handlerRef Pointer that specifies the function to call when event fires
      * @returns True if the function was bound successfully to the event, otherwise false
      */
-    public static AttachEvent: (obj: any, eventNameWithoutOn: string, handlerRef: any) => boolean = _attachEvent;
+    public static AttachEvent: (obj: any, eventNameWithoutOn: string, handlerRef: any) => boolean = attachEvent;
 
     /**
      * Removes an event handler for the specified event
@@ -717,7 +432,7 @@ export class EventHelper {
      * @param callback {any} - The callback function that needs to be executed for the given event
      * @return {boolean} - true if the handler was successfully added
      */
-    public static Detach: (obj: any, eventNameWithoutOn: string, handlerRef: any) => void = _detachEvent;
+    public static Detach: (obj: any, eventNameWithoutOn: string, handlerRef: any) => void = detachEvent;
 
     /**
      * Removes an event handler for the specified event
@@ -726,90 +441,6 @@ export class EventHelper {
      * @param callback {any} - The callback function that needs to be executed for the given event
      * @return {boolean} - true if the handler was successfully added
      */
-    public static DetachEvent: (obj: any, eventNameWithoutOn: string, handlerRef: any) => void = _detachEvent;
+    public static DetachEvent: (obj: any, eventNameWithoutOn: string, handlerRef: any) => void = detachEvent;
 }
 
-/**
- * Returns the name of object if it's an Error. Otherwise, returns empty string.
- */
-export function getExceptionName(object: any): string {
-    if (CoreUtils.isError(object)) {
-        return object.name;
-    }
-
-    return "";
-}
-
-/**
- * Returns string representation of an object suitable for diagnostics logging.
- */
-export function dumpObj(object: any): string {
-    const objectTypeDump: string = Object[strShimPrototype].toString.call(object);
-    let propertyValueDump: string = "";
-    if (objectTypeDump === "[object Error]") {
-        propertyValueDump = "{ stack: '" + object.stack + "', message: '" + object.message + "', name: '" + object.name + "'";
-    } else if (hasJSON()) {
-        propertyValueDump = getJSON().stringify(object);
-    }
-
-    return objectTypeDump + propertyValueDump;
-}
-
-export function uaDisallowsSameSiteNone(userAgent: string) {
-    if (!CoreUtils.isString(userAgent)) {
-        return false;
-    }
-
-    // Cover all iOS based browsers here. This includes:
-    // - Safari on iOS 12 for iPhone, iPod Touch, iPad
-    // - WkWebview on iOS 12 for iPhone, iPod Touch, iPad
-    // - Chrome on iOS 12 for iPhone, iPod Touch, iPad
-    // All of which are broken by SameSite=None, because they use the iOS networking stack
-    if (userAgent.indexOf("CPU iPhone OS 12") !== -1 || userAgent.indexOf("iPad; CPU OS 12") !== -1) {
-        return true;
-    }
-
-    // Cover Mac OS X based browsers that use the Mac OS networking stack. This includes:
-    // - Safari on Mac OS X
-    // This does not include:
-    // - Internal browser on Mac OS X
-    // - Chrome on Mac OS X
-    // - Chromium on Mac OS X
-    // Because they do not use the Mac OS networking stack.
-    if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && userAgent.indexOf("Version/") !== -1 && userAgent.indexOf("Safari") !== -1) {
-        return true;
-    }
-
-    // Cover Mac OS X internal browsers that use the Mac OS networking stack. This includes:
-    // - Internal browser on Mac OS X
-    // This does not include:
-    // - Safari on Mac OS X
-    // - Chrome on Mac OS X
-    // - Chromium on Mac OS X
-    // Because they do not use the Mac OS networking stack.
-    if (userAgent.indexOf("Macintosh; Intel Mac OS X 10_14") !== -1 && strEndsWith(userAgent, "AppleWebKit/605.1.15 (KHTML, like Gecko)")) {
-        return true;
-    }
-
-    // Cover Chrome 50-69, because some versions are broken by SameSite=None, and none in this range require it.
-    // Note: this covers some pre-Chromium Edge versions, but pre-Chromim Edge does not require SameSite=None, so this is fine.
-    // Note: this regex applies to Windows, Mac OS X, and Linux, deliberately.
-    if (userAgent.indexOf("Chrome/5") !== -1 || userAgent.indexOf("Chrome/6") !== -1) {
-        return true;
-    }
-
-    // Unreal Engine runs Chromium 59, but does not advertise as Chrome until 4.23. Treat versions of Unreal
-    // that don't specify their Chrome version as lacking support for SameSite=None.
-    if (userAgent.indexOf("UnrealEngine") !== -1 && userAgent.indexOf("Chrome") === -1) {
-        return true;
-    }
-
-    // UCBrowser < 12.13.2 ignores Set-Cookie headers with SameSite=None
-    // NB: this rule isn't complete - you need regex to make a complete rule.
-    // See: https://www.chromium.org/updates/same-site/incompatible-clients
-    if (userAgent.indexOf("UCBrowser/12") !== -1 || userAgent.indexOf("UCBrowser/11") !== -1) {
-        return true;
-    }
-
-    return false;
-}

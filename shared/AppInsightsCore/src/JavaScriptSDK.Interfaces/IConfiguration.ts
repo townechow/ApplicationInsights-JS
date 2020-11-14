@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 import { ITelemetryPlugin } from "./ITelemetryPlugin";
 import { IChannelControls } from "./IChannelControls";
+import { ICookieMgrConfig } from "./ICookieMgr";
 
 "use strict";
 
@@ -109,18 +110,23 @@ export interface IConfiguration {
     idLength?: number;
 
     /**
-     * @description If true, the SDK will not store or read any data from cookies. Default is false.
-     * @type {boolean}
-     * @memberof IConfig
-     * @defaultValue false
-     */
-    isCookieUseDisabled?: boolean;
-
-    /**
      * @description Custom cookie domain. This is helpful if you want to share Application Insights cookies across subdomains.
      * @type {string}
      * @memberof IConfig
      * @defaultValue ""
      */
     cookieDomain?: string;
+
+    /**
+     * [Optional] A boolean that indicated whether to disable the use of cookies by the SDK. If true, the SDK will not store or
+     * read any data from cookies. Cookie usage can be re-enabled after initialization via the core.getCookieMgr().enable().
+     */
+    disableCookiesUsage?: boolean;
+
+    /**
+     * [Optional] A Cookie Manager configuration which includes hooks to allow interception of the get, set and delete cookie 
+     * operations. If this configuration is specified any specified enabled and domain properties will take precedence over the
+     * cookieDomain and disableCookiesUsage values.
+     */
+    cookieMgrCfg?: ICookieMgrConfig;
 }

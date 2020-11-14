@@ -57,6 +57,9 @@ export default class PropertiesPlugin extends BaseTelemetryPlugin implements IPr
                 _self.context = new TelemetryContext(core, _extensionConfig);
                 _breezeChannel = Util.getExtension(extensions, BreezeChannelIdentifier);
                 _self.context.appId = () => _breezeChannel ? _breezeChannel["_appId"] : null;
+
+                // Test hook to allow accessing the internal values -- explicitly not defined as an available property on the class
+                _self["_extConfig"] = _extensionConfig;
             };
     
             /**

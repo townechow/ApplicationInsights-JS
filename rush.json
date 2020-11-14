@@ -7,6 +7,10 @@
   "projectFolderMaxDepth": 4,
   "projects": [
     {
+      "packageName": "@microsoft/applicationinsights-rollup-plugin-uglify3-js",
+      "projectFolder": "tools/rollup-plugin-uglify3-js"
+    },
+    {
       "packageName": "@microsoft/applicationinsights-rollup-es3",
       "projectFolder": "tools/rollup-es3",
       "shouldPublish": true

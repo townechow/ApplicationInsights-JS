@@ -10,10 +10,9 @@ import { IPlugin, ITelemetryPlugin } from "../JavaScriptSDK.Interfaces/ITelemetr
 import { ITelemetryItem } from "../JavaScriptSDK.Interfaces/ITelemetryItem";
 import { IProcessTelemetryContext } from "../JavaScriptSDK.Interfaces/IProcessTelemetryContext";
 import { ITelemetryPluginChain } from "../JavaScriptSDK.Interfaces/ITelemetryPluginChain";
-import { CoreUtils } from "./CoreUtils";
 import { ProcessTelemetryContext } from './ProcessTelemetryContext';
+import { isFunction } from "./HelperFuncs";
 
-let _isFunction = CoreUtils.isFunction;
 let getPlugin = "getPlugin";
 
 /**
@@ -109,7 +108,7 @@ export abstract class BaseTelemetryPlugin implements ITelemetryPlugin {
             if (itemCtx) {
                 // Normal core execution sequence
                 itemCtx.processNext(env);
-            } else if (_nextPlugin && _isFunction(_nextPlugin.processTelemetry)) {
+            } else if (_nextPlugin && isFunction(_nextPlugin.processTelemetry)) {
                 // Looks like backward compatibility or out of band processing. And as it looks 
                 // like a ITelemetryPlugin or ITelemetryPluginChain, just call processTelemetry
                 _nextPlugin.processTelemetry(env, null);

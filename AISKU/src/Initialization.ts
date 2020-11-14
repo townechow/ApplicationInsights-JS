@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 import { 
-    CoreUtils, IConfiguration, AppInsightsCore, IAppInsightsCore, LoggingSeverity, _InternalMessageId, ITelemetryItem, ICustomProperties, 
-    IChannelControls, hasWindow, hasDocument, isReactNative, doPerf, IDiagnosticLogger, INotificationManager, objForEachKey
+    IConfiguration, AppInsightsCore, IAppInsightsCore, LoggingSeverity, _InternalMessageId, ITelemetryItem, ICustomProperties, 
+    IChannelControls, hasWindow, hasDocument, isReactNative, doPerf, IDiagnosticLogger, INotificationManager, objForEachKey,
+    arrForEach, isNullOrUndefined, isString, isFunction, addEventHandler
  } from "@microsoft/applicationinsights-core-js";
 import { ApplicationInsights } from "@microsoft/applicationinsights-analytics-js";
 import { Sender } from "@microsoft/applicationinsights-channel-js";
@@ -243,8 +244,8 @@ export class Initialization implements IApplicationInsights {
      */
     public flush(async: boolean = true) {
         doPerf(this.core, () => "AISKU.flush", () => {
-            CoreUtils.arrForEach(this.core.getTransmissionControls(), channels => {
-                CoreUtils.arrForEach(channels, channel => {
+            arrForEach(this.core.getTransmissionControls(), channels => {
+                arrForEach(channels, channel => {
                     channel.flush(async);
                 })
             })
@@ -258,8 +259,8 @@ export class Initialization implements IApplicationInsights {
      * @memberof Initialization
      */
     public onunloadFlush(async: boolean = true) {
-        CoreUtils.arrForEach(this.core.getTransmissionControls(), channels => {
-            CoreUtils.arrForEach(channels, (channel: IChannelControls & Sender) => {
+        arrForEach(this.core.getTransmissionControls(), channels => {
+            arrForEach(channels, (channel: IChannelControls & Sender) => {
                 if (channel.onunloadFlush) {
                     channel.onunloadFlush();
                 } else {
@@ -280,7 +281,7 @@ export class Initialization implements IApplicationInsights {
         function _updateSnippetProperties(snippet: Snippet) {
             if (snippet) {
                 let snippetVer = "";
-                if (!CoreUtils.isNullOrUndefined(_self._snippetVersion)) {
+                if (!isNullOrUndefined(_self._snippetVersion)) {
                     snippetVer += _self._snippetVersion;
                 }
                 if (legacyMode) {
@@ -293,8 +294,8 @@ export class Initialization implements IApplicationInsights {
 
                 // apply updated properties to the global instance (snippet)
                 objForEachKey(_self, (field, value) => {
-                    if (CoreUtils.isString(field) && 
-                            !CoreUtils.isFunction(value) && 
+                    if (isString(field) && 
+                            !isFunction(value) && 
                             field.substring(0, 1) !== "_") {            // Don't copy "internal" values
                         snippet[field as string] = value;
                     }
@@ -343,7 +344,7 @@ export class Initialization implements IApplicationInsights {
         // apply full appInsights to the global instance
         // Note: This must be called before loadAppInsights is called
         objForEachKey(this, (field, value) => {
-            if (CoreUtils.isString(field)) {
+            if (isString(field)) {
                 snippet[field as string] = value;
             }
         });
@@ -371,7 +372,7 @@ export class Initialization implements IApplicationInsights {
             }
         } catch (exception) {
             const properties: any = {};
-            if (exception && CoreUtils.isFunction(exception.toString)) {
+            if (exception && isFunction(exception.toString)) {
                 properties.exception = exception.toString();
             }
 
@@ -414,8 +415,8 @@ export class Initialization implements IApplicationInsights {
             if (!appInsightsInstance.appInsights.config.disableFlushOnBeforeUnload) {
                 // Hook the unload event for the document, window and body to ensure that the client events are flushed to the server
                 // As just hooking the window does not always fire (on chrome) for page navigations.
-                let added = CoreUtils.addEventHandler('beforeunload', performHousekeeping);
-                added = CoreUtils.addEventHandler('pagehide', performHousekeeping) || added;
+                let added = addEventHandler('beforeunload', performHousekeeping);
+                added = addEventHandler('pagehide', performHousekeeping) || added;
 
                 // A reactNative app may not have a window and therefore the beforeunload/pagehide events -- so don't
                 // log the failure in this case
@@ -430,7 +431,7 @@ export class Initialization implements IApplicationInsights {
             // We also need to hook the pagehide event as not all versions of Safari support load/unload events.
             if (!appInsightsInstance.appInsights.config.disableFlushOnUnload) {
                 // Not adding any telemetry as pagehide as it's not supported on all browsers
-                CoreUtils.addEventHandler('pagehide', performHousekeeping);
+                addEventHandler('pagehide', performHousekeeping);
             }
         }
     }

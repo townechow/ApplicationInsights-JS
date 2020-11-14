@@ -7,7 +7,7 @@ import {
 } from "@microsoft/applicationinsights-shims";
 
 /**
- * This file exists to hold environment utilities that are requied to check and
+ * This file exists to hold environment utilities that are required to check and
  * validate the current operating environment. Unless otherwise required, please
  * only defined methods (functions) in this class so that users of these 
  * functions/properties only need to include those that are used within their own modules.
@@ -29,6 +29,8 @@ const strJSON = "JSON";
 const strCrypto = "crypto";
 const strMsCrypto = "msCrypto";
 const strReactNative = "ReactNative";
+
+let _isTrident: boolean = null;
 
 /**
  * Returns the current global scope object, for a normal web page this will be the current
@@ -247,4 +249,32 @@ export function isReactNative(): boolean {
     }
 
     return false;
+}
+
+/**
+ * Identifies whether the current environment appears to be IE
+ */
+export function isIE() {
+    if (_isTrident === null) {
+        let navigator = getNavigator() || ({} as Navigator);
+        let userAgent = (navigator.userAgent || "").toLowerCase();
+        _isTrident = (userAgent.indexOf("msie") !== -1 || userAgent.indexOf("trident/") !== -1);
+    }
+
+    return _isTrident;
+}
+
+/**
+ * Returns string representation of an object suitable for diagnostics logging.
+ */
+export function dumpObj(object: any): string {
+    const objectTypeDump: string = Object[strShimPrototype].toString.call(object);
+    let propertyValueDump: string = "";
+    if (objectTypeDump === "[object Error]") {
+        propertyValueDump = "{ stack: '" + object.stack + "', message: '" + object.message + "', name: '" + object.name + "'";
+    } else if (hasJSON()) {
+        propertyValueDump = getJSON().stringify(object);
+    }
+
+    return objectTypeDump + propertyValueDump;
 }
