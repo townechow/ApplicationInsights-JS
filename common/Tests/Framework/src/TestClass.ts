@@ -1,8 +1,6 @@
-/// <reference path="../../External/sinon.d.ts" />
-/// <reference path="../../External/qunit.d.ts" />
-
 import { Assert } from "./Assert";
 import { TestCase, TestCaseAsync } from "./TestCase";
+import QUnit from "qunit";
 
 export class TestClass {
 

@@ -1,4 +1,3 @@
-/// <reference path="../../External/qunit.d.ts" />
 
 import { Assert } from "./Assert";
 import { TestClass } from "./TestClass";
