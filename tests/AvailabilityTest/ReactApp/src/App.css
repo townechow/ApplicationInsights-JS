@@ -1,0 +1,42 @@
+
+.App-logo {
+  height: 2vmin;
+  pointer-events: none;
+}
+
+.App-wrapper {
+  min-height: 2vmin;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: calc(10px + 2vmin);
+  padding-bottom:  calc(10px + 1.2vmin);
+}
+
+.App-body {
+  font-size: calc(8px + 1vmin);
+}
+
+.loading-wrapper {
+  text-align: center;
+}
+
+.test-tel-title, .cdn-title {
+  font-size: calc(8px + 1.2vmin);
+  min-height: 3vmin;
+  padding-top: calc(10px + 0.8vmin);
+}
+
+
+.test-sent-time, .check-cdn-wrapper, .list-body, .check-cdn-time {
+  font-size: calc(8px + 0.8vmin);
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
