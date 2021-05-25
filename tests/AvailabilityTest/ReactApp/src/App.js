@@ -13,39 +13,39 @@ function App() {
   const [cookie,setcookie] = useState()
   const [isloading,setisloading] = useState(true)
   const [sentTime, setsentTime] = useState("")
-  const [res,setres] = useState("")
+  const [sentBuffer,setsentBuffer] = useState("")
   const [istrigger,setistrigger] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      localStorage.clear()
       let insightOject =  window.appInsights;
       setappInsights(insightOject);
       insightOject.sv? setsv(insightOject.sv):setsv();
       insightOject.version? setver(insightOject.version):setver();
       insightOject.cookie? setcookie(insightOject.cookie):setcookie();
-      if(insightOject.appInsights&&insightOject.appInsights.core.isInitialized()){setisInitialized(true)}
-      setisloading(false)
+      if(insightOject.appInsights && insightOject.appInsights.core.isInitialized()){setisInitialized(true);}
+      setisloading(false);
     }, 10);
     return () => clearTimeout(timer);
-  }, []);   
+  }, []); 
+  
+  useEffect(() =>{
+    if (appInsights && appInsights.core) {
+      let notificationManager = appInsights.core.getNotifyMgr() || appInsights.core["_notificationManager"];
+      notificationManager.addNotificationListener({ eventsSendRequest: (sendReason, isAsync) => {
+            var sentData = sessionStorage.getItem("AI_sentBuffer");
+            var newData = sentBuffer+sentData;
+            setsentBuffer(newData);}  
+    });}
+  },[appInsights,sentBuffer]);
 
   useEffect(() => {
     if (!isloading && appInsights) {
       testTelemetry(appInsights);
-      setistrigger(true)
+      setistrigger(true);
     }
-    setsentTime(Date().toLocaleString())
+    setsentTime(Date().toLocaleString());
   },[isloading,appInsights]);
-
-  useEffect(() => {
-    if (istrigger)
-    {
-      //TODO: change to event listeners method
-      var cache = sessionStorage.getItem("AI_sentBuffer")
-      setres(cache)
-    }
-  },[istrigger]);
 
   return (
     <div className="App">
@@ -58,8 +58,7 @@ function App() {
         <div className="switch-list-wrapper">
           {!isloading? <div className="test-tel-title">Telemetry Testing</div>:""}
           {sentTime? <div className="test-sent-time">Telemetry sent time: {sentTime}</div>:""}
-          {istrigger?
-          <List res = {res}/>:""}
+          {istrigger? <List res = {sentBuffer}/>:""}
         </div>
         <div className="cdn-status">
           <div className="cdn-title">CDN Status</div>
