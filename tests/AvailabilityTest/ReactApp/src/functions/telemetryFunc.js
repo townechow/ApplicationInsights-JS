@@ -1,5 +1,4 @@
 export default function testTelemetry (appInsights) {
-    //TODO: add notifyMgr 
     appInsights.trackEvent({name: 'ai-test-trackevent'});
     appInsights.trackPageView({name: 'ai-test-trackPageView'});
     appInsights.trackPageViewPerformance({name : 'ai-test-trackPageViewPerformance'});
