@@ -1,6 +1,6 @@
 import React from 'react';
 
-const List =(props)=> {
+const TelemetryList =(props)=> {
     var result = props.res;
     var isEventTrack = result.includes("ai-test-trackevent");
     var isPageViewTrack = result.includes("ai-test-trackPageView")
@@ -43,4 +43,4 @@ const List =(props)=> {
         </div>
     );
 }
-export default List;
+export default TelemetryList;

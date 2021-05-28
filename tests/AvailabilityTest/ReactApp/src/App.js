@@ -1,7 +1,7 @@
 import './App.css';
 import React, {useState, useEffect} from 'react';
 import testTelemetry from "./functions/telemetryFunc";
-import List from "./component/List";
+import TelemetryList from "./component/TelemetryList";
 import Loading from "./component/Loading";
 import CheckCDN from "./component/CheckCDN";
 
@@ -12,7 +12,7 @@ function App() {
   const [ver,setver] = useState()
   const [cookie,setcookie] = useState()
   const [isloading,setisloading] = useState(true)
-  const [sentTime, setsentTime] = useState("")
+  const [sentTime, setsentTime] = useState()
   const [sentBuffer,setsentBuffer] = useState("")
   const [istrigger,setistrigger] = useState(false)
 
@@ -23,24 +23,24 @@ function App() {
       insightOject.sv? setsv(insightOject.sv):setsv();
       insightOject.version? setver(insightOject.version):setver();
       insightOject.cookie? setcookie(insightOject.cookie):setcookie();
-      if(insightOject.appInsights && insightOject.appInsights.core.isInitialized()){setisInitialized(true);}
-      setisloading(false);
-    }, 10);
+      if(insightOject.appInsights && insightOject.appInsights.core.isInitialized())
+      {setisInitialized(true); setisloading(false);}
+    }, 1000);
     return () => clearTimeout(timer);
   }, []); 
   
   useEffect(() =>{
-    if (appInsights && appInsights.core) {
+    if (!isloading) {
       let notificationManager = appInsights.core.getNotifyMgr() || appInsights.core["_notificationManager"];
       notificationManager.addNotificationListener({ eventsSendRequest: (sendReason, isAsync) => {
             var sentData = sessionStorage.getItem("AI_sentBuffer");
             var newData = sentBuffer+sentData;
             setsentBuffer(newData);}  
     });}
-  },[appInsights,sentBuffer]);
+  },[appInsights,sentBuffer,isloading]);
 
   useEffect(() => {
-    if (!isloading && appInsights) {
+    if (!isloading) {
       testTelemetry(appInsights);
       setistrigger(true);
     }
@@ -57,12 +57,12 @@ function App() {
         </div>
         <div className="switch-list-wrapper">
           {!isloading? <div className="test-tel-title">Telemetry Testing</div>:""}
-          {sentTime? <div className="test-sent-time">Telemetry sent time: {sentTime}</div>:""}
-          {istrigger? <List res = {sentBuffer}/>:""}
+          {(!isloading && sentTime)? <div className="test-sent-time">Telemetry sent time: {sentTime}</div>:""}
+          {istrigger? <TelemetryList res = {sentBuffer}/>:""}
         </div>
         <div className="cdn-status">
-          <div className="cdn-title">CDN Status</div>
-          <CheckCDN />
+          {!isloading? <div className="cdn-title">CDN Status</div>:""}
+          {!isloading? <CheckCDN />:""}
         </div>
        </div>
       </div>
