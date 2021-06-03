@@ -11,7 +11,7 @@ module.exports = async function (context, req) {
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
       await page.goto(url);
-      await page.waitForTimeout(6000);
+      await page.waitForTimeout(8000);
       let content = await page.evaluate(()=> document.body.outerHTML);
       isloaded = content.includes("appInsights loaded successfully");
       isTelemetryTracked = content.includes("All Telemetry Signals Tracked: Yes");
