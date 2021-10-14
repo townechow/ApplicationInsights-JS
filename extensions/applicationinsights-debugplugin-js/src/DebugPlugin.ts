@@ -139,7 +139,7 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                             notifyMgr.addNotificationListener({
                                 eventsSent: (events: ITelemetryItem[]) => {
                                     window.postMessage({ eventType: "eventsSent" });
-                                    dashboard.newLogEntry(events, dateNow() - startTime, 'Notification:eventsSent', 0, 'eventsSent');
+                                    dashboard.newLogEntry(events, dateNow() - startTime, "Notification:eventsSent", 0, "eventsSent");
                                 },
                                 eventsDiscarded: (events: ITelemetryItem[], reason: number) => {
                                     window.postMessage({ eventType: "eventsDiscarded" });

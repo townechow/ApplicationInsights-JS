@@ -7,5 +7,5 @@
 // This code runs in the page, and is used to connect to the 1DS client code
 
 export function pageScript(): void {
-    document.body.style.backgroundColor = 'orange';
+    document.body.style.backgroundColor = "orange";
 }
