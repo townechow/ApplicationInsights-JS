@@ -161,6 +161,7 @@ module.exports = function (grunt) {
                                             src: [
                                                 "./tools/chrome-debug-extension/src/popup.tsx",
                                                 "./tools/chrome-debug-extension/src/background.ts",
+                                                "./tools/chrome-debug-extension/src/pageScript.ts",
                                             ]
                                         }
                                     },

@@ -123,9 +123,58 @@ const generatePopup = isProduction => {
   return browserRollupConfig;
 };
 
+const generateContentScript = isProduction => {
+  const contentScriptRollupConfig = {
+    input: `dist-esm/pageScript.js`,
+    output: {
+      file: `browser/scripts/pageScript.js`,
+      banner: banner,
+      format: "umd",
+      name: "Microsoft.ApplicationInsights",
+      extend: true,
+      freeze: false,
+      sourcemap: true
+    },
+    plugins: [
+      nodeResolve({
+        browser: true,
+        preferBuiltins: true,
+        dedupe: [ "react", "react-dom" ]
+      }),
+      commonjs(),
+      replace({
+        preventAssignment: true,
+        delimiters: ["", ""],
+        values: replaceValues
+      })
+    ]
+  };
+
+   if (isProduction) {
+    browserRollupConfig.output.file = `browser/pageScript.js`;
+    browserRollupConfig.plugins.push(
+      uglify({
+        ie8: true,
+        toplevel: true,
+        compress: {
+          passes:3,
+          unsafe: true
+        },
+        output: {
+          preamble: banner,
+          webkit:true
+        }
+      })
+    );
+  }
+
+  return contentScriptRollupConfig;
+};
+
 updateDistEsmFiles(replaceValues, banner);
 
 export default [
   generateBackground(false),
-  generatePopup(false)
+  generatePopup(false),
+  generateContentScript(false)
 ];

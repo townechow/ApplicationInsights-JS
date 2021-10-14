@@ -138,9 +138,11 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                         if (notifyMgr) {
                             notifyMgr.addNotificationListener({
                                 eventsSent: (events: ITelemetryItem[]) => {
+                                    window.postMessage({ eventType: "eventsSent" });
                                     dashboard.newLogEntry(events, dateNow() - startTime, 'Notification:eventsSent', 0, 'eventsSent');
                                 },
                                 eventsDiscarded: (events: ITelemetryItem[], reason: number) => {
+                                    window.postMessage({ eventType: "eventsDiscarded" });
                                     dashboard.newLogEntry({
                                         events,
                                         reason
@@ -148,12 +150,14 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
     
                                 },
                                 eventsSendRequest: (sendReason: number, isAsync: boolean): void => {
+                                    window.postMessage({ eventType: "eventsSendRequest" });
                                     dashboard.newLogEntry({
                                         sendReason,
                                         isAsync
                                     }, dateNow() - startTime, 'Notification:eventsSendRequest', 0, 'eventsSendRequest');
                                 },
                                 perfEvent: (perfEvent: IPerfEvent): void => {
+                                    window.postMessage({ eventType: "perfEvent" });
                                     let evtName = `Notification:perfEvent[${perfEvent.name}]`;
                                     dashboard.newLogEntry(
                                         perfEvent,

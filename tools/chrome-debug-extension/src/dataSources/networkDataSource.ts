@@ -4,6 +4,7 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+//import { pageScript } from '../pageScript';
 import { IDataEvent } from './IDataEvent';
 import { IDataSource } from './IDataSource';
 
