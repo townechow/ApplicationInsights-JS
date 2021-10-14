@@ -5,13 +5,13 @@ import {
     BaseTelemetryPlugin, IConfiguration, arrForEach,
     IAppInsightsCore, IPlugin, ITelemetryItem, IProcessTelemetryContext, _InternalLogMessage, _InternalMessageId,
     ITelemetryPluginChain, InstrumentFunc, IInstrumentCallDetails, InstrumentorHooksCallback, IPerfEvent, IChannelControls, objForEachKey, isFunction, dateNow, isArray, isUndefined
-} from '@microsoft/applicationinsights-core-js';
-import { Dashboard } from './components/Dashboard';
-import { getTargetName } from './components/helpers';
-import { permStyle } from './components/styleNodeSrc';
-import { DebugBin, DebugBinParent } from './components/debugBins';
+} from "@microsoft/applicationinsights-core-js";
+import { Dashboard } from "./components/Dashboard";
+import { getTargetName } from "./components/helpers";
+import { permStyle } from "./components/styleNodeSrc";
+import { DebugBin, DebugBinParent } from "./components/debugBins";
 import dynamicProto from "@microsoft/dynamicproto-js";
-import { IDebugPluginConfig } from './interfaces/IDebugPluginConfig';
+import { IDebugPluginConfig } from "./interfaces/IDebugPluginConfig";
 
 interface IDebugConfig {
 
@@ -35,22 +35,22 @@ interface IDebugConfig {
 const getDefaultConfig = (): IDebugConfig => {
     const config = {
         trackers: () => [
-            'flush',
-            'track',
-            'trackEvent',
-            'trackPageView',
-            'trackPageViewPerformance',
-            'trackException',
-            'trackTrace',
-            'trackMetric',
-            'trackDependencyData',
-            'processTelemetry',
-            'throwInternal',
-            'logInternalMessage',
-            'triggerSend',
-            '_sender',
-            'perfEvent',
-            'initialize'
+            "flush",
+            "track",
+            "trackEvent",
+            "trackPageView",
+            "trackPageViewPerformance",
+            "trackException",
+            "trackTrace",
+            "trackMetric",
+            "trackDependencyData",
+            "processTelemetry",
+            "throwInternal",
+            "logInternalMessage",
+            "triggerSend",
+            "_sender",
+            "perfEvent",
+            "initialize"
         ],
         excludeKeys: () => [
             "_dynInstFuncs",
@@ -62,7 +62,7 @@ const getDefaultConfig = (): IDebugConfig => {
             "setNextPlugin",
             "processNext"
         ],
-        cssPrefix: () => 'ai',
+        cssPrefix: () => "ai",
         disableNotifications: () => false,
         dumpToConsole: () => false,
         maxMessages: () => 5000,
@@ -146,7 +146,7 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                                     dashboard.newLogEntry({
                                         events,
                                         reason
-                                    }, dateNow() - startTime, 'Notification:eventsDiscarded', 0, 'eventsDiscarded');
+                                    }, dateNow() - startTime, "Notification:eventsDiscarded", 0, "eventsDiscarded");
     
                                 },
                                 eventsSendRequest: (sendReason: number, isAsync: boolean): void => {
@@ -154,14 +154,14 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                                     dashboard.newLogEntry({
                                         sendReason,
                                         isAsync
-                                    }, dateNow() - startTime, 'Notification:eventsSendRequest', 0, 'eventsSendRequest');
+                                    }, dateNow() - startTime, "Notification:eventsSendRequest", 0, "eventsSendRequest");
                                 },
                                 perfEvent: (perfEvent: IPerfEvent): void => {
                                     window.postMessage({ eventType: "perfEvent" });
                                     let evtName = `Notification:perfEvent[${perfEvent.name}]`;
                                     dashboard.newLogEntry(
                                         perfEvent,
-                                        dateNow() - startTime, evtName, 0, 'perfEvent');
+                                        dateNow() - startTime, evtName, 0, "perfEvent");
                                 }
                             });
 
@@ -262,14 +262,14 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                         } else {
                             dashboard.show();
                         }
-                    }, 'show dashboard');
+                    }, "show dashboard");
 
                     document.body.appendChild(
                         debugBinContainer
                     );
 
                     // 8. Log the config as "keep" so it won't be dropped or cleared
-                    dashboard.newLogEntry(config, 0, 'config', 0, 'config', true);
+                    dashboard.newLogEntry(config, 0, "config", 0, "config", true);
                 }
             }
 
@@ -317,7 +317,7 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                 let identifier = getTargetName(funcArgs.inst);
                 let evtPrefix = funcArgs.name;
                 if (identifier) {
-                    evtPrefix += ':' + identifier;
+                    evtPrefix += ":" + identifier;
                 }
 
                 return evtPrefix;
@@ -326,8 +326,8 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
             function _handleInstPreHook() {
                 return (funcArgs: IInstrumentCallDetails, ...orgArgs: any[]) => {
                     (debugBins[funcArgs.name] || debugBins.default).increment();
-                    if (funcArgs.name === 'trackException' && !debugBinParent.showChildren) {
-                        debugBinParent.addClassToEl('notify');
+                    if (funcArgs.name === "trackException" && !debugBinParent.showChildren) {
+                        debugBinParent.addClassToEl("notify");
                     }
 
                     let evtPrefix = _getEvtPrefix(funcArgs);
@@ -345,7 +345,7 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                         let evtPrefix = _getEvtPrefix(funcArgs);
 
                         if (!debugBinParent.showChildren) {
-                            debugBinParent.addClassToEl('notify');
+                            debugBinParent.addClassToEl("notify");
                         }
     
                         // The called function threw an exception
@@ -362,8 +362,8 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                     console.log(`[${_self.identifier}:processTelemetry] complete`);
                 }
 
-                if (!debugBins['processTelemetry'] && _theConfig.logProcessTelemetry() === true) {
-                    dashboard.newLogEntry(event, dateNow() - startTime, `[${_self.identifier}:processTelemetry[${event.baseType}]`, 0, 'processTelemetry');
+                if (!debugBins["processTelemetry"] && _theConfig.logProcessTelemetry() === true) {
+                    dashboard.newLogEntry(event, dateNow() - startTime, `[${_self.identifier}:processTelemetry[${event.baseType}]`, 0, "processTelemetry");
                 }
                 _self.processNext(event, itemCtx);
             }
