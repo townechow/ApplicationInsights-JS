@@ -9,12 +9,12 @@ function registerEventHandlers(): void {
 
   chrome.browserAction.onClicked.addListener(function(tab) {
     // No tabs or host permissions needed!
-    console.log("Turning " + tab.url + " blue!");
+    console.log("Turning " + tab.url + " red!");
     if (tab && tab.id) {
+      console.log(tab.id);
       chrome.tabs.executeScript(tab.id, {
-        code: "document.body.style.backgroundColor='blue';"
-        // code: "window.addEventListener('message', (event) => { console.log('red'); }, false);"
-        // code: "document.body.style.backgroundColor=\"red\";  window.addEventListener(\"message\", (event) => { if (event.source != window) { return; } chrome.runtime.sendMessage(event.data); }, false);"
+        // code: "console.log('yellow');"
+        code: "document.body.style.backgroundColor=\"red\";  window.addEventListener(\"message\", (event) => { if (event.source != window) { return; } chrome.runtime.sendMessage(event.data); }, false);"
         // code: 'setInterval(() => chrome.runtime.sendMessage({ eventType: "eventsSent" }), 1000)'
         // code: 'document.body.style.backgroundColor="red"'
         //file: '/scripts/pageScript.js'
