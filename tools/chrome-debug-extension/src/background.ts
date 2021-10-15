@@ -9,13 +9,22 @@ function registerEventHandlers(): void {
 
   chrome.browserAction.onClicked.addListener(function(tab) {
     // No tabs or host permissions needed!
-    console.log("Turning " + tab.url + " red!");
-    chrome.tabs.executeScript({
-      code: "document.body.style.backgroundColor=\"red\";  window.addEventListener(\"message\", (event) => { if (event.source != window) { return; } chrome.runtime.sendMessage(event.data); }, false);"
-      // code: 'setInterval(() => chrome.runtime.sendMessage({ eventType: "eventsSent" }), 1000)'
-      // code: 'document.body.style.backgroundColor="red"'
-      //file: '/scripts/pageScript.js'
-    });
+    console.log("Turning " + tab.url + " blue!");
+    if (tab && tab.id) {
+      chrome.tabs.executeScript(tab.id, {
+        code: "document.body.style.backgroundColor='blue';"
+        // code: "window.addEventListener('message', (event) => { console.log('red'); }, false);"
+        // code: "document.body.style.backgroundColor=\"red\";  window.addEventListener(\"message\", (event) => { if (event.source != window) { return; } chrome.runtime.sendMessage(event.data); }, false);"
+        // code: 'setInterval(() => chrome.runtime.sendMessage({ eventType: "eventsSent" }), 1000)'
+        // code: 'document.body.style.backgroundColor="red"'
+        //file: '/scripts/pageScript.js'
+      }, _=>{
+        let e = chrome.runtime.lastError;
+        if(e !== undefined){
+          console.log(tab.id, _, e);
+        }
+      });
+    }
   });
 
   // chrome.tabs.query({currentWindow: true, active: true}, (tabs: chrome.tabs.Tab[]) => {
