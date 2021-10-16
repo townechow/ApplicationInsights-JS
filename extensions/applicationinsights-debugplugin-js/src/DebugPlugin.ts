@@ -138,11 +138,11 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
                         if (notifyMgr) {
                             notifyMgr.addNotificationListener({
                                 eventsSent: (events: ITelemetryItem[]) => {
-                                    window.postMessage({ eventType: "eventsSent" }, "*");
+                                    // window.postMessage(events, "*");
                                     dashboard.newLogEntry(events, dateNow() - startTime, "Notification:eventsSent", 0, "eventsSent");
                                 },
                                 eventsDiscarded: (events: ITelemetryItem[], reason: number) => {
-                                    window.postMessage({ eventType: "eventsDiscarded" }, "*");
+                                    // window.postMessage(events, "*");
                                     dashboard.newLogEntry({
                                         events,
                                         reason
@@ -150,14 +150,22 @@ export default class DebugPlugin extends BaseTelemetryPlugin {
     
                                 },
                                 eventsSendRequest: (sendReason: number, isAsync: boolean): void => {
-                                    window.postMessage({ eventType: "eventsSendRequest" }, "*");
+                                    // window.postMessage({ sendReason: sendReason }, "*");
                                     dashboard.newLogEntry({
                                         sendReason,
                                         isAsync
                                     }, dateNow() - startTime, "Notification:eventsSendRequest", 0, "eventsSendRequest");
                                 },
                                 perfEvent: (perfEvent: IPerfEvent): void => {
-                                    window.postMessage({ eventType: "perfEvent" }, "*");
+                                    let messageObj = {
+                                        name: perfEvent.name,
+                                        start: perfEvent.start,
+                                        payload: perfEvent.payload,
+                                        isAsync: perfEvent.isAsync,
+                                        time: perfEvent.time || "",
+                                        exTime: perfEvent.exTime || ""
+                                    }
+                                    window.postMessage(messageObj, "*");
                                     let evtName = `Notification:perfEvent[${perfEvent.name}]`;
                                     dashboard.newLogEntry(
                                         perfEvent,

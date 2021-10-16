@@ -30,13 +30,20 @@ export class OneDSDataSource implements IDataSource {
     return this.listeners.delete(id);
   };
 
+  // private onMessageReceived = (data: any, sender: any, sendResponse: any): void => {
+  //   console.log(`Received message: ${data}`);
+  //   if (data && data.eventType) {
+  //     // tslint:disable-next-line:no-any
+  //     this.listeners.forEach((listener: (newEvent: any) => void) => {
+  //       listener({ name: data.eventType, time: 'whenever', data: {} });
+  //     });
+  //   }
+  // }
   private onMessageReceived = (data: any, sender: any, sendResponse: any): void => {
     console.log(`Received message: ${data}`);
-    if (data && data.eventType) {
       // tslint:disable-next-line:no-any
       this.listeners.forEach((listener: (newEvent: any) => void) => {
-        listener({ name: data.eventType, time: 'whenever', data: {} });
+          listener({ name: data.name, time: data.time, data: data });
       });
-    }
   }
 }
