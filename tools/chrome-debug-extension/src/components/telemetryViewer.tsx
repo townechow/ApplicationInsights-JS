@@ -29,7 +29,7 @@ export const TelemetryViewer = (
   const [filterSettings, setFilterSettings] = React.useState<IFilterSettings>({
     filterText: "",
     filterByType: undefined,
-    showCondensedDetails: false,
+    showCondensedDetails: false
   });
   const [selectedIndex, setSelectedIndex] = React.useState<number | undefined>(
     undefined
@@ -144,7 +144,7 @@ export const TelemetryViewer = (
         : {
             name: filteredEventData[selectedIndex].name,
             time: filteredEventData[selectedIndex].time,
-            data: filteredEventData[selectedIndex].data,
+            data: filteredEventData[selectedIndex].data
           }
       : undefined;
 

@@ -70,7 +70,7 @@ function myFunc() {
   var debugPluginInstance = new debugPlugin();
   // Application Insights Configuration
   var configObj = {
-    instrumentationKey: "MyInstrumentationKey",
+    instrumentationKey: "b4348c7f-70e9-4acb-8826-43be875dfa9f",
     appId: "OSKAR",
     disableFetchTracking: false,
     enableCorsCorrelation: true,
@@ -87,7 +87,8 @@ function myFunc() {
   configObj.extensionConfig[debugPlugin.identifier] = {
     //trackers: toTrack,
     //logProcessTelemetry: true,
-    maxMessages: 50
+    maxMessages: 50,
+    dumpToConsole: true
   };
 
   var appInsights = new Microsoft.ApplicationInsights.ApplicationInsights({ config: configObj });

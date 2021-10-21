@@ -4,6 +4,7 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+import { objForEachKey } from '@microsoft/applicationinsights-core-js';
 import React from 'react';
 import { IColumn, IConfiguration } from '../configuration/IConfiguration';
 import { applyConverter, getDynamicFieldValue } from '../dataSources/dataHelpers';
@@ -18,10 +19,52 @@ interface IEventTableProps {
   onRowClickHandler: any;
 }
 
+// Issues:
+// 1. current logic is to reset props.dataEvents when user clicks new row. This causes two issues: 1) previous children are lost 2) can't open childEvts of childEvts
+// Ideas:
+// 1. add new section "middle" to display childEvts 2. (how) to record current status of which childEvts are opened, etc (index messed up)
 export const EventTable = (props: IEventTableProps): React.ReactElement<IEventTableProps> => {
+  const [dataEvents, setDataEvents] = React.useState<IDataEvent[]>(props.dataEvents);
+  // const [index, setIndex] = React.useState<number>(props.dataEvents.length);
+  const [childDataEvents, setChildDataEvents] = React.useState<IDataEvent>();
+  const [preSelectIdx, setPreSelectIdx] = React.useState<any>();
+  React.useEffect(() => {
+    let tmp = props.dataEvents.slice(0);
+    if (childDataEvents !== undefined && childDataEvents !== null && props.selectedIndex === preSelectIdx) {
+      tmp.splice(props.selectedIndex as number + 1, 0, childDataEvents);
+    }
+    // let pre = dataEvents.slice(0);
+    // setDataEvents(pre.concat(tmp));
+    // setIndex(props.dataEvents.length);
+    setDataEvents(tmp);
+  }, [props.dataEvents]);
+
+  React.useEffect(() => {
+    let tmp = props.dataEvents.slice(0);
+    setDataEvents(tmp);
+  }, [props.selectedIndex]);
+
   // Not state because we want these to be per-render
   const deltaColumnsPreviousValues = new Map<number, number | undefined>();
   let lastSessionNumber: string | undefined = undefined;
+
+  function onClick(e: React.MouseEvent<HTMLTableRowElement, MouseEvent>) {
+    props.onRowClickHandler(e);
+    setPreSelectIdx(props.selectedIndex);
+    if (props.dataEvents !== undefined && props.selectedIndex !== undefined) {
+      let childEvts = props.dataEvents[props.selectedIndex] && props.dataEvents[props.selectedIndex]["data"] && props.dataEvents[props.selectedIndex]["data"]["childEvts"];
+      if (childEvts !== undefined) {
+        objForEachKey(childEvts, (idx: string) => {
+          let child: IDataEvent = childEvts[idx];
+          setChildDataEvents(child);
+          let tmp = dataEvents.slice(0);
+          tmp.splice(props.selectedIndex as number + 1, 0, child);
+          // tmp.push(child);
+          setDataEvents(tmp);
+        });
+      }
+    }
+  }
 
   return (
     <div className='eventTableDiv'>
@@ -38,7 +81,7 @@ export const EventTable = (props: IEventTableProps): React.ReactElement<IEventTa
           </tr>
         </thead>
         <tbody>
-          {props.dataEvents.map((dataEvent: IDataEvent, rowIndex: number) => {
+          {dataEvents.map((dataEvent: IDataEvent, rowIndex: number) => {
             const isNewSession =
               lastSessionNumber !== undefined && dataEvent.sessionNumber !== lastSessionNumber;
 
@@ -108,7 +151,7 @@ export const EventTable = (props: IEventTableProps): React.ReactElement<IEventTa
                 key={`Row_${rowIndex}`}
                 item-data={rowIndex}
                 className={className}
-                onClick={props.onRowClickHandler}
+                onClick={(props.dataEvents !== undefined && props.selectedIndex !== undefined) ? (e) => onClick(e) : props.onRowClickHandler}
               >
                 <td key={`Row_${rowIndex}_Td_-1`}>
                   <EventTypeIcon eventType={dataEvent.type} suppress={['appLogic']} />
