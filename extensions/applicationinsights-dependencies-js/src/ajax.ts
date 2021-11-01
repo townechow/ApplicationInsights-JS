@@ -10,10 +10,10 @@ import {
     isNullOrUndefined, arrForEach, isString, strTrim, isFunction, LoggingSeverity, _InternalMessageId,
     IAppInsightsCore, BaseTelemetryPlugin, ITelemetryPluginChain, IConfiguration, IPlugin, ITelemetryItem, IProcessTelemetryContext,
     getLocation, getGlobal, strUndefined, strPrototype, IInstrumentCallDetails, InstrumentFunc, InstrumentProto, getPerformance,
-    IInstrumentHooksCallbacks, IInstrumentHook, objForEachKey, generateW3CId, getIEVersion, dumpObj,objKeys, ICustomProperties, isXhrSupported, attachEvent
+    IInstrumentHooksCallbacks, IInstrumentHook, objForEachKey, generateW3CId, getIEVersion, dumpObj,objKeys, ICustomProperties, isXhrSupported, attachEvent,
+    formatTraceParent, createTraceParent
 } from "@microsoft/applicationinsights-core-js";
 import { ajaxRecord, IAjaxRecordResponse } from "./ajaxRecord";
-import { Traceparent } from "./TraceParent";
 import dynamicProto from "@microsoft/dynamicproto-js";
 
 const AJAX_MONITOR_PREFIX = "ai.ajxmn.";
@@ -312,10 +312,10 @@ export class AjaxMonitor extends BaseTelemetryPlugin implements IDependenciesPlu
                             }
                         }
                         if (_isUsingW3CHeaders) {
-                            const traceparent = new Traceparent(ajaxData.traceID, ajaxData.spanID);
-                            init.headers.set(RequestHeaders.traceParentHeader, traceparent.toString());
+                            const traceParent = formatTraceParent(createTraceParent(ajaxData.traceID, ajaxData.spanID, 0x01));
+                            init.headers.set(RequestHeaders.traceParentHeader, traceParent);
                             if (_enableRequestHeaderTracking) {
-                                ajaxData.requestHeaders[RequestHeaders.traceParentHeader] = traceparent.toString();
+                                ajaxData.requestHeaders[RequestHeaders.traceParentHeader] = traceParent;
                             }
                         }
                     }
@@ -338,10 +338,10 @@ export class AjaxMonitor extends BaseTelemetryPlugin implements IDependenciesPlu
                             }
                         }
                         if (_isUsingW3CHeaders) {
-                            const traceparent = new Traceparent(ajaxData.traceID, ajaxData.spanID);
-                            xhr.setRequestHeader(RequestHeaders.traceParentHeader, traceparent.toString());
+                            const traceParent = formatTraceParent(createTraceParent(ajaxData.traceID, ajaxData.spanID, 0x01));
+                            xhr.setRequestHeader(RequestHeaders.traceParentHeader, traceParent);
                             if (_enableRequestHeaderTracking) {
-                                ajaxData.requestHeaders[RequestHeaders.traceParentHeader] = traceparent.toString();
+                                ajaxData.requestHeaders[RequestHeaders.traceParentHeader] = traceParent;
                             }
                         }
                     }

@@ -163,4 +163,11 @@ export interface IConfiguration {
      * Page Show events include "pageshow" and "visibilitychange" (with 'visible' state)
      */
     disablePageShowEvents?: string[];
+
+
+    /**
+     * [Optional] A flag to stop the automatic detection of any passed "traceparent" header from the server, by default the Sdk will look for
+     * a meta-tag on the DOM or a Server-Timing header with a name of "traceparent". In all cases the value is validated before it is used.
+     */
+    disableTraceParent?: boolean;
 }

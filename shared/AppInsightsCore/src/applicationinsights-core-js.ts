@@ -57,3 +57,7 @@ export {
     createCookieMgr, safeGetCookieMgr, uaDisallowsSameSiteNone, areCookiesSupported
 } from "./JavaScriptSDK/CookieMgr";
 export { strIKey, strExtensionConfig } from "./JavaScriptSDK/Constants";
+export { ITraceParent } from "./JavaScriptSDK.Interfaces/ITraceParent";
+export {
+    createTraceParent, parseTraceParent, isValidTraceId, isValidSpanId, isValidTraceParent, isSampledFlag, formatTraceParent, findW3cTraceParent
+} from "./JavaScriptSDK/W3cTraceParent";

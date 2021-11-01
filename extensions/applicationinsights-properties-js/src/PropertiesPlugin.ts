@@ -32,7 +32,8 @@ export default class PropertiesPlugin extends BaseTelemetryPlugin implements IPr
             sessionCookiePostfix: () => undefined,
             userCookiePostfix: () => undefined,
             idLength: () => 22,
-            getNewId: () => null
+            getNewId: () => null,
+            disableTraceParent: () => false
         };
         
         return defaultConfig;

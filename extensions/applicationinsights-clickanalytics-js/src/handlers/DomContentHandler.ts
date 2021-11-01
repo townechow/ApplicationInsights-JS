@@ -225,7 +225,7 @@ export class DomContentHandler implements IContentHandler {
     private _getMetaDataFromDOM(captureAllMetaDataContent:boolean, prefix: string, removePrefix: boolean): { [name: string]: string } {
         var metaElements: any;
         var metaData = {};
-        if (hasDocument) {
+        if (hasDocument()) {
             metaElements = document.querySelectorAll("meta");
             for (var i = 0; i < metaElements.length; i++) {
                 var meta = metaElements[i];

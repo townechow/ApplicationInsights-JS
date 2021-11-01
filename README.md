@@ -253,6 +253,10 @@ appInsights.addTelemetryInitializer(() => false); // Nothing is sent after this 
 appInsights.trackTrace({message: 'this message will not be sent'}); // Not sent
 ```
 
+### Distributed Tracing support
+
+To support Server-Side Correlation see the [Distributed Tracing](docs/DistributedTracing.md) page.
+
 ## Configuration
 
 Most configuration fields are named such that they can be defaulted to falsey. All fields are optional except for `instrumentationKey`.
@@ -312,6 +316,7 @@ Most configuration fields are named such that they can be defaulted to falsey. A
 | maxAjaxPerfLookupAttempts | numeric | 3 | Defaults to 3. The maximum number of times to look for the window.performance timings (if available), this is required as not all browsers populate the window.performance before reporting the end of the XHR request and for fetch requests this is added after its complete.
 | ajaxPerfLookupDelay | numeric | 25 | Defaults to 25ms. The amount of time to wait before re-attempting to find the windows.performance timings for an ajax request, time is in milliseconds and is passed directly to setTimeout().
 | distributedTracingMode | numeric or `DistributedTracingModes` | `DistributedTracingModes.AI_AND_W3C` | Sets the distributed tracing mode. If AI_AND_W3C mode or W3C mode is set, W3C trace context headers (traceparent/tracestate) will be generated and included in all outgoing requests. AI_AND_W3C is provided for back-compatibility with any legacy Application Insights instrumented services.
+| disableTraceParent | boolean | false | [Optional] A flag to stop the automatic detection of any passed "traceparent" header from the server, by default the Sdk will look for a meta-tag on the DOM or a Server-Timing header with a name of "traceparent". In all cases the value is validated before it is used. This flag disables the `<meta />` tag and `Server-Timing` header support added in v2.7.1 as described on the [Distributed Tracing](docs/DistributedTracing.md) page.
 | enableUnhandledPromiseRejectionTracking | boolean | false | If true, unhandled promise rejections will be autocollected and reported as a javascript error. When disableExceptionTracking is true (dont track exceptions) the config value will be ignored and unhandled promise rejections will not be reported.
 | disableInstrumentationKeyValidation | boolean | false | If true, instrumentation key validation check is bypassed. Default value is false.
 | enablePerfMgr | boolean | false | [Optional] When enabled (true) this will create local perfEvents for code that has been instrumented to emit perfEvents (via the doPerf() helper). This can be used to identify performance issues within the SDK based on your usage or optionally within your own instrumented code. [More details are available by the basic documentation](./docs/PerformanceMonitoring.md). Since v2.5.7

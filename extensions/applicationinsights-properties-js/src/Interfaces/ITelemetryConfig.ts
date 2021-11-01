@@ -17,4 +17,5 @@ export interface ITelemetryConfig {
     userCookiePostfix: () => string;
     idLength: () => number;
     getNewId: () => (idLength?: number) => string;
+    disableTraceParent: () => boolean;
 }
